@@ -1,0 +1,4 @@
+**/__pycache__
+data/
+app/seed_demo.py
+*.md

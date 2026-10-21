@@ -1,0 +1,26 @@
+name: Homeledger
+version: "1.0.0"
+slug: homeledger
+description: >-
+  Домашний бюджет: планы обустройства, список продуктов, авто,
+  регулярные платежи, жители и статистика трат.
+url: https://github.com/exelka3/ha-homeledger
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: application
+boot: auto
+
+# Opened from the HA sidebar only; no port is exposed to the network.
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:home-analytics
+panel_title: Homeledger
+
+# Sensors, notifications and people (person.*) via the Core API.
+homeassistant_api: true
+
+backup: hot
+options: {}
+schema: {}

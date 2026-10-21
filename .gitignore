@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+# local development data (demo database)
+homeledger/data/
+dist/
+.claude/
