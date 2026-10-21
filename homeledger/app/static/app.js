@@ -565,7 +565,8 @@ function groceries() {
   const sug = suggestions();
   const trips = [...db.trips].sort((a, b) => (a.date < b.date ? 1 : -1));
   return `
-    <div class="row"><h2>Список продуктов</h2><span class="spacer"></span>
+    <div class="row"><h2>Список продуктов</h2>${db.settings.todo_entity
+      ? `<span class="badge" title="Синхронизируется с ${esc(db.settings.todo_entity)}${db.settings.yandex_station ? " и Алисой" : ""}">⇄ ${db.settings.yandex_station ? "Алиса" : "Home Assistant"}</span>` : ""}<span class="spacer"></span>
       <button class="btn primary big" id="start-shop" ${db.groceries.length ? "" : "disabled"}>Иду в магазин</button></div>
     <div class="card">
       <form class="add-bar" id="add-grocery">
@@ -581,7 +582,7 @@ function groceries() {
       ${groups.length
         ? groups.map(([cat, items]) => `<div class="cat-title">${esc(cat)}</div><ul class="list">${items.map((g) => `<li>
             <div class="grow"><span class="title">${esc(g.name)}</span>${g.qty ? ` <span class="muted small">· ${esc(g.qty)}</span>` : ""}</div>
-            ${g.added_by ? residentChip(g.added_by) : ""}
+            ${g.added_by ? residentChip(g.added_by) : g.source === "todo" ? `<span class="badge">${db.settings.yandex_station ? "Алиса" : "HA"}</span>` : ""}
             <button class="icon-btn" data-edit-grocery="${g.id}" title="Изменить">✎</button>
             <button class="icon-btn" data-del-grocery="${g.id}" title="Убрать">✕</button></li>`).join("")}</ul>`).join("")
         : `<div class="empty">Список пуст — добавьте продукты, которые нужно купить.</div>`}
@@ -971,6 +972,7 @@ async function loadHaInfo() {
   try {
     const [st, pv] = await Promise.all([api("GET", "ha/status"), api("GET", "ha/preview")]);
     ui.haServices = st.notify_services || [];
+    loadTodoInfo(st.todo);
     const dl = $("#dl-notify");
     if (dl) dl.innerHTML = ui.haServices.map((x) => `<option value="${esc(x)}">`).join("");
     const modes = { supervisor: "через Supervisor", token: "по токену (HA_URL)", none: "" };
@@ -994,7 +996,76 @@ async function loadHaInfo() {
   }
 }
 
+// Shopping list sync: Homeledger <-> HA To-do <-> Alice (Yandex.Station integration).
+function todoCard(s) {
+  const current = (value, empty) => `<option value="">${empty}</option>${value ? `<option value="${esc(value)}" selected>${esc(value)}</option>` : ""}`;
+  return `<div class="card" id="todo-card"><h3>Список покупок ⇄ Алиса</h3>
+    <div class="muted small" style="margin:-4px 0 14px">Продукты синхронизируются со списком дел Home Assistant, а через интеграцию
+      <a href="https://github.com/AlexxIT/YandexStation" target="_blank" rel="noopener">Yandex.Station</a> — со «Списком покупок» Алисы.
+      Скажите «Алиса, добавь молоко в список покупок» — молоко появится здесь.</div>
+    <form id="todo-form">
+      <div class="fields-2">
+        <label class="field"><span>Список дел в Home Assistant</span><select name="todo_entity">${current(s.todo_entity, "Не синхронизировать")}</select></label>
+        <label class="field"><span>Колонка с Алисой</span><select name="yandex_station">${current(s.yandex_station, "Без Алисы")}</select></label>
+      </div>
+      <div class="row"><button class="btn primary sm">Сохранить</button><button type="button" class="btn sm" id="todo-sync-now">Синхронизировать сейчас</button></div>
+    </form>
+    <div id="todo-status" class="muted small" style="margin-top:12px"></div>
+    <details style="margin-top:10px"><summary class="small">Что нужно в Home Assistant</summary><ol class="small muted" style="padding-left:18px;margin:8px 0 0">
+      <li>Интеграция «Список покупок» или «Локальный список дел» — это и будет общий список.</li>
+      <li>Интеграция Yandex.Station из HACS, колонка в <b>локальном режиме</b> (в той же сети, что HA).</li>
+      <li>Выберите список и колонку выше. Синхронизация — раз в минуту и сразу после изменений здесь.</li>
+      <li>Отмеченное «куплено» в магазине исчезает и из списка Алисы.</li></ol></details>
+  </div>`;
+}
+
+async function loadTodoInfo(todoState) {
+  const box = $("#todo-status");
+  if (!box) return;
+  const t = todoState || {};
+  box.innerHTML = t.last_error
+    ? `<span class="doc expired">Ошибка</span> ${esc(t.last_error)}`
+    : t.last_sync
+      ? `<span class="doc ok">Синхронизировано ${t.last_sync.slice(11, 16)}</span> пришло ${t.in_added}, ушло ${t.out_added}, вычеркнуто: здесь ${t.in_removed}, там ${t.out_removed}`
+      : db.settings.todo_entity ? "Ещё не синхронизировалось" : "";
+  try {
+    const ents = await api("GET", "ha/entities");
+    const form = $("#todo-form");
+    if (!form) return;
+    const fill = (select, list, empty) => {
+      const value = select.value;
+      const ids = new Set(list.map((x) => x.entity_id));
+      select.innerHTML = `<option value="">${empty}</option>` + list.map((x) => `<option value="${esc(x.entity_id)}">${esc(x.name)} · ${esc(x.entity_id)}</option>`).join("")
+        + (value && !ids.has(value) ? `<option value="${esc(value)}">${esc(value)} (не найдено)</option>` : "");
+      select.value = value;
+    };
+    fill(form.todo_entity, ents.todo, "Не синхронизировать");
+    fill(form.yandex_station, ents.stations, "Без Алисы");
+  } catch { /* no HA — keep the saved values */ }
+}
+
+function bindTodoCard() {
+  const form = $("#todo-form");
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    mutate("PUT", "settings", { todo_entity: form.todo_entity.value, yandex_station: form.yandex_station.value }, "Синхронизация списка сохранена");
+  };
+  $("#todo-sync-now").onclick = async (e) => {
+    e.target.disabled = true;
+    try {
+      const st = await api("POST", "ha/todo/sync", {});
+      await reload();
+      toast(`Синхронизировано: пришло ${st.in_added}, ушло ${st.out_added}`);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (e.target.isConnected) e.target.disabled = false;
+    }
+  };
+}
+
 function bindHaCard() {
+  bindTodoCard();
   const form = $("#ha-form");
   form.onsubmit = (e) => {
     e.preventDefault();
@@ -1188,6 +1259,7 @@ function settings() {
       ${tagEditor("car_categories", "Категории расходов на авто")}
       ${tagEditor("bill_categories", "Категории регулярных платежей")}
       ${haCard(s)}
+      ${todoCard(s)}
       ${tagEditor("notify_services", "Получатели уведомлений", "Сервисы notify из Home Assistant, например notify.mobile_app_pixel_8. Сюда уходят напоминания о документах и бюджете, а платёжные — если у плательщика не указан свой сервис.", "dl-notify")}
       <div class="card"><h3>Данные</h3>
         <div class="muted small" style="margin-bottom:10px">Резервная копия всех данных в JSON.</div>

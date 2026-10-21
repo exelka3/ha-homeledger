@@ -14,7 +14,8 @@ from datetime import date, datetime, timedelta
 
 import logic
 
-TICK_SECONDS = 300
+TICK_SECONDS = 300   # sensors, people, notifications
+JOB_SECONDS = 60     # fast jobs such as the shopping list sync
 QUIET_FROM_HOUR = 22  # no notifications from this hour until settings.notify_hour
 
 status = {"mode": "none", "connected": False, "last_push": None, "last_error": None, "sent": 0}
@@ -64,6 +65,9 @@ class Client:
         req = urllib.request.Request(root + path, headers={"Authorization": f"Bearer {self.token}"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.read(), resp.headers.get("Content-Type", "image/jpeg")
+
+    def entities(self, domain):
+        return [s for s in (self.call("GET", "/states") or []) if s.get("entity_id", "").startswith(domain + ".")]
 
     def notify_services(self):
         services = self.call("GET", "/services") or []
@@ -347,15 +351,23 @@ def tick(load, save, lock):
         status["sent"] += len(sent)
 
 
-def start(load, save, lock):
+def start(load, save, lock, jobs=()):
     def run():
+        last_tick, woke = 0.0, True
         while True:
-            try:
-                tick(load, save, lock)
-            except Exception as e:  # noqa: BLE001
-                status["last_error"] = f"worker: {e}"
-            _wake.wait(TICK_SECONDS)
-            if _wake.is_set():
+            if woke or time.monotonic() - last_tick >= TICK_SECONDS:
+                try:
+                    tick(load, save, lock)
+                except Exception as e:  # noqa: BLE001
+                    status["last_error"] = f"worker: {e}"
+                last_tick = time.monotonic()
+            for job in jobs:
+                try:
+                    job(load, save, lock)
+                except Exception:  # noqa: BLE001 — each job reports its own errors
+                    pass
+            woke = _wake.wait(JOB_SECONDS)
+            if woke:
                 _wake.clear()
                 time.sleep(2)  # debounce bursts of edits
     threading.Thread(target=run, daemon=True, name="ha-worker").start()

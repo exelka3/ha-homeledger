@@ -16,6 +16,7 @@ from pathlib import Path
 
 import ha
 import logic
+import todo_sync
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -60,6 +61,8 @@ DEFAULT_DB = {
         "budget_bills": 0,
         "sensors_enabled": True,
         "sync_persons": True,
+        "todo_entity": "",
+        "yandex_station": "",
         "notify_enabled": True,
         "notify_services": [],
         "notify_persistent": True,
@@ -250,6 +253,15 @@ class Handler(SimpleHTTPRequestHandler):
         parts = self._api_parts()
         if parts and parts[:2] == ["ha", "avatar"] and len(parts) == 3 and method == "GET":
             return self._send_avatar(parts[2])
+        if parts == ["ha", "todo", "sync"] and method == "POST":
+            # Runs outside the db lock: it talks to HA and takes the lock itself.
+            try:
+                result = todo_sync.sync(load_db, save_db, _lock)
+            except Exception as e:  # noqa: BLE001
+                return self._send_json({"error": f"Синхронизация не удалась: {e}"}, HTTPStatus.BAD_GATEWAY)
+            if result is None:
+                return self._send_json({"error": "Не выбран список дел Home Assistant"}, HTTPStatus.BAD_REQUEST)
+            return self._send_json(result)
         if parts is None:
             if method == "GET":
                 return super().do_GET()
@@ -364,7 +376,20 @@ class Handler(SimpleHTTPRequestHandler):
                     ha.status.update(connected=True)
                 except Exception as e:  # noqa: BLE001
                     ha.status.update(connected=False, last_error=str(e))
-            return {**ha.status, "notify_services": services}, False
+            return {**ha.status, "notify_services": services, "todo": todo_sync.state}, False
+
+        if parts == ["entities"] and method == "GET":
+            if not ha.client.available:
+                return {"todo": [], "stations": []}, False
+            try:
+                todo = ha.client.entities("todo")
+                players = ha.client.entities("media_player")
+            except RuntimeError as e:
+                raise ApiError(HTTPStatus.BAD_GATEWAY, str(e))
+            pick = lambda s: {"entity_id": s["entity_id"], "name": s.get("attributes", {}).get("friendly_name") or s["entity_id"]}
+            # Yandex.Station players first: they're the ones that can sync Alice's list.
+            players.sort(key=lambda s: "yandex" not in s["entity_id"])
+            return {"todo": [pick(s) for s in todo], "stations": [pick(s) for s in players]}, False
 
         if parts == ["preview"] and method == "GET":
             pending = [{**n, "targets": ha.targets(db, n)} for n in ha.collect(db)]
@@ -420,7 +445,7 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    ha.start(load_db, save_db, _lock)
+    ha.start(load_db, save_db, _lock, jobs=[todo_sync.sync])
     print(f"Homeledger listening on :{PORT}, data in {DB_FILE}, Home Assistant: {ha.client.mode}", flush=True)
     server.serve_forever()
 
