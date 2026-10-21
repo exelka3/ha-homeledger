@@ -4,8 +4,10 @@ Zero dependencies: Python stdlib HTTP server + JSON file storage.
 All URLs are relative so the app works behind HA Ingress.
 """
 
+import hashlib
 import json
 import os
+import re
 import threading
 import time
 import uuid
@@ -25,6 +27,31 @@ STATIC_DIR = BASE_DIR / "static"
 DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR.parent / "data"))
 DB_FILE = DATA_DIR / "db.json"
 PORT = int(os.environ.get("PORT", "8099"))
+
+
+def addon_version():
+    """Version from the add-on build (BUILD_VERSION), else from the bundled config.yaml, else "dev"."""
+    if os.environ.get("HOMELEDGER_VERSION"):
+        return os.environ["HOMELEDGER_VERSION"]
+    for config in (BASE_DIR / "addon_config.yaml", BASE_DIR.parent / "config.yaml"):
+        if config.exists():
+            m = re.search(r'^version:\s*"?([^"\n]+)"?', config.read_text(encoding="utf-8"), re.M)
+            if m:
+                return m.group(1).strip()
+    return "dev"
+
+
+VERSION = addon_version()
+
+
+def asset_fingerprint():
+    """Hash of every static file: changes whenever the app does, so browsers can't keep stale copies."""
+    h = hashlib.sha1()
+    for f in sorted(STATIC_DIR.rglob("*")):
+        if f.is_file():
+            h.update(f.relative_to(STATIC_DIR).as_posix().encode())
+            h.update(f.read_bytes())
+    return h.hexdigest()[:10]
 # In the add-on only the Supervisor's Ingress proxy may talk to us (no auth of our own).
 ALLOWED_CLIENTS = {ip.strip() for ip in os.environ.get("ALLOWED_CLIENTS", "").split(",") if ip.strip()}
 
@@ -257,9 +284,27 @@ class Handler(SimpleHTTPRequestHandler):
         if self._allowed():
             super().do_HEAD()
 
+    def _send_index(self):
+        # Asset URLs carry a content fingerprint and the page itself is never cached,
+        # so an add-on update always reaches the browser (incl. the HA companion app).
+        v = asset_fingerprint()
+        html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        for name in ("style.css", "i18n.js", "app.js", "logo.svg"):
+            html = html.replace(f'"{name}"', f'"{name}?v={v}"')
+        html = html.replace("</head>", f'  <meta name="hl-asset" content="{v}">\n  <meta name="hl-version" content="{VERSION}">\n</head>', 1)
+        data = html.encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
     def _handle(self, method):
         if not self._allowed():
             return
+        if method == "GET" and self.path.split("?", 1)[0] in ("/", "/index.html"):
+            return self._send_index()
         parts = self._api_parts()
         if parts and parts[:2] == ["ha", "avatar"] and len(parts) == 3 and method == "GET":
             return self._send_avatar(parts[2])
@@ -462,7 +507,7 @@ def main():
         except RuntimeError as e:
             print(f"Could not read the Home Assistant language: {e}", flush=True)
     ha.start(load_db, save_db, _lock, jobs=[todo_sync.sync])
-    print(f"Homeledger listening on :{PORT}, data in {DB_FILE}, Home Assistant: {ha.client.mode}", flush=True)
+    print(f"Homeledger {VERSION} listening on :{PORT}, data in {DB_FILE}, Home Assistant: {ha.client.mode}", flush=True)
     server.serve_forever()
 
 

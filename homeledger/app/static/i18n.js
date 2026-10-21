@@ -36,7 +36,8 @@ function resolveLanguage(setting) {
 }
 
 async function loadLocale(lang) {
-  const get = (code) => fetch(`locales/${code}.json`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  const asset = document.querySelector('meta[name="hl-asset"]')?.content;
+  const get = (code) => fetch(`locales/${code}.json${asset ? "?v=" + asset : ""}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
   const [dict, fallback] = await Promise.all([get(lang), lang === "en" ? Promise.resolve(null) : get("en")]);
   I18N.lang = lang;
   I18N.dict = dict;

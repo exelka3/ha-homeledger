@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.2
+
+- Fixed: after an update the browser or the Home Assistant app could keep showing the
+  previous version. Scripts, styles and translations are now loaded with a content
+  fingerprint, and the page itself is never cached.
+- The add-on version is shown at the bottom of **Settings**.
+
 ## 1.2.1
 
 - Compact amounts in the monthly chart and the per-resident table now keep one decimal

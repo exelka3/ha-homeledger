@@ -1273,7 +1273,8 @@ function settings() {
         <div class="muted small" style="margin-bottom:10px">${t("settings.backup_hint")}</div>
         <div class="row"><a class="btn sm" href="api/export" download="homeledger.json">${t("settings.export")}</a>
         <label class="btn sm">${t("settings.import")}<input type="file" id="import-file" accept=".json" hidden></label></div></div>
-    </div>`;
+    </div>
+    <div class="muted small" style="text-align:center;margin-top:28px">Homeledger ${esc(document.querySelector('meta[name="hl-version"]')?.content || "")}</div>`;
 }
 
 function currencyCard(s) {
