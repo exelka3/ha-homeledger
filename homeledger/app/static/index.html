@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -10,7 +10,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand" title="Homeledger — домашний бюджет">
+    <div class="brand" title="Homeledger — home budget" data-i18n-title="common.brand_title">
       <svg class="mark" viewBox="0 0 48 48" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect width="48" height="48" rx="12" style="fill:var(--ink)"/>
         <path d="M10 21.5 24 10.5l14 11V36a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2Z" style="stroke:var(--ink-text)" stroke-width="2.8"/>
@@ -19,28 +19,28 @@
       </svg>
       <span class="word">Home<i>ledger</i></span>
     </div>
-    <div class="me" id="me" title="Вы вошли в Home Assistant как этот житель"></div>
+    <div class="me" id="me" title="You are signed in to Home Assistant as this resident" data-i18n-title="common.me_title"></div>
     <nav class="tabs" id="tabs">
       <!-- Icons: Lucide (ISC license), inlined so the add-on works offline. -->
-      <button data-view="overview" class="active" title="Обзор" aria-label="Обзор">
+      <button data-view="overview" class="active" title="Overview" aria-label="Overview" data-i18n-title="nav.overview" data-i18n-aria="nav.overview">
         <svg viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
       </button>
-      <button data-view="plans" title="Обустройство" aria-label="Обустройство">
+      <button data-view="plans" title="Home improvement" aria-label="Home improvement" data-i18n-title="nav.plans" data-i18n-aria="nav.plans">
         <svg viewBox="0 0 24 24"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M4 18v2"/><path d="M20 18v2"/><path d="M12 4v9"/></svg>
       </button>
-      <button data-view="groceries" title="Продукты" aria-label="Продукты">
+      <button data-view="groceries" title="Groceries" aria-label="Groceries" data-i18n-title="nav.groceries" data-i18n-aria="nav.groceries">
         <svg viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
       </button>
-      <button data-view="cars" title="Авто" aria-label="Авто">
+      <button data-view="cars" title="Cars" aria-label="Cars" data-i18n-title="nav.cars" data-i18n-aria="nav.cars">
         <svg viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
       </button>
-      <button data-view="bills" title="Платежи" aria-label="Платежи">
+      <button data-view="bills" title="Bills" aria-label="Bills" data-i18n-title="nav.bills" data-i18n-aria="nav.bills">
         <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
       </button>
-      <button data-view="stats" title="Статистика" aria-label="Статистика">
+      <button data-view="stats" title="Statistics" aria-label="Statistics" data-i18n-title="nav.stats" data-i18n-aria="nav.stats">
         <svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
       </button>
-      <button data-view="settings" title="Настройки" aria-label="Настройки">
+      <button data-view="settings" title="Settings" aria-label="Settings" data-i18n-title="nav.settings" data-i18n-aria="nav.settings">
         <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </nav>
@@ -53,15 +53,16 @@
       <h3 id="modal-title"></h3>
       <div id="modal-body"></div>
       <div class="modal-actions">
-        <button type="button" class="btn danger ghost" id="modal-delete" hidden>Удалить</button>
+        <button type="button" class="btn danger ghost" id="modal-delete" hidden data-i18n="common.delete">Delete</button>
         <span class="spacer"></span>
-        <button type="button" class="btn ghost" id="modal-cancel">Отмена</button>
-        <button type="submit" class="btn primary" id="modal-submit">Сохранить</button>
+        <button type="button" class="btn ghost" id="modal-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="modal-submit" data-i18n="common.save">Save</button>
       </div>
     </form>
   </div>
 
   <div class="toast" id="toast" hidden></div>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

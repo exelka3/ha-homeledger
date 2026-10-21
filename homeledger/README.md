@@ -2,7 +2,11 @@
 
 ![Homeledger](logo.png)
 
-Домашний бюджет для Home Assistant: планы обустройства, продукты, авто,
-регулярные платежи, жители из HA, сенсоры и уведомления, статистика трат.
+A household budget for Home Assistant: home improvement plans, groceries with an
+in-store mode, cars, recurring bills, residents from Home Assistant, sensors,
+notifications, shopping list sync (including Alice / Yandex Station) and spending statistics.
 
-Подробности — во вкладке «Документация» аддона ([DOCS.md](DOCS.md)).
+Available in English, Русский, Deutsch, Français, Español, Italiano, Português,
+Nederlands, Polski, Українська, Lietuvių, Latviešu and Eesti.
+
+See the add-on's **Documentation** tab ([DOCS.md](DOCS.md)).

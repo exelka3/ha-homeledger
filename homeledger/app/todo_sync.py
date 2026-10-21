@@ -15,6 +15,7 @@ from datetime import datetime
 
 import ha
 import logic
+from i18n import tr
 
 state = {"last_sync": None, "last_error": None, "in_added": 0, "in_removed": 0, "out_added": 0, "out_removed": 0}
 _running = threading.Lock()
@@ -32,7 +33,7 @@ def category_for(db, name):
         for item in trip["items"]:
             if item.get("name", "").strip().lower() == n and item.get("category"):
                 return item["category"]
-    return "Другое"
+    return tr("fallback.other")
 
 
 def fetch_items(entity):

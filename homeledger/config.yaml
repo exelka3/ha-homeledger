@@ -1,9 +1,9 @@
 name: Homeledger
-version: "1.1.0"
+version: "1.2.0"
 slug: homeledger
 description: >-
-  Домашний бюджет: планы обустройства, список продуктов, авто,
-  регулярные платежи, жители и статистика трат.
+  Household budget: home plans, shopping list, cars, recurring bills,
+  residents and spending statistics. 13 languages.
 url: https://github.com/exelka3/ha-homeledger
 arch:
   - aarch64

@@ -12,7 +12,9 @@ import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 
+import i18n
 import logic
+from i18n import tr
 
 TICK_SECONDS = 300   # sensors, people, notifications
 JOB_SECONDS = 60     # fast jobs such as the shopping list sync
@@ -46,7 +48,7 @@ class Client:
         except urllib.error.HTTPError as e:
             raise RuntimeError(f"HA {e.code}: {e.read().decode('utf-8', 'replace')[:200]}") from e
         except urllib.error.URLError as e:
-            raise RuntimeError(f"HA недоступен: {e.reason}") from e
+            raise RuntimeError(tr("error.ha_unreachable", reason=e.reason)) from e
         return json.loads(body) if body else None
 
     def notify(self, service, title, message, tag=None):
@@ -69,6 +71,9 @@ class Client:
     def entities(self, domain):
         return [s for s in (self.call("GET", "/states") or []) if s.get("entity_id", "").startswith(domain + ".")]
 
+    def language(self):
+        return (self.call("GET", "/config") or {}).get("language")
+
     def notify_services(self):
         services = self.call("GET", "/services") or []
         return sorted(f"notify.{name}" for d in services if d.get("domain") == "notify" for name in d.get("services", {}))
@@ -88,19 +93,20 @@ def sensors(db, today=None):
     money_attrs = {"unit_of_measurement": unit, "device_class": "monetary", "state_class": "total"}
     out = {
         "sensor.home_budget_month_total": (summary["total"], {
-            **money_attrs, "friendly_name": "Траты за месяц", "icon": "mdi:cash-multiple",
-            **{logic.KIND_LABELS[k]: v for k, v in summary["by_kind"].items()}, "по жителям": summary["by_payer"]}),
+            **money_attrs, "friendly_name": tr("sensor.month_total"), "icon": "mdi:cash-multiple",
+            # Stable English keys so automations keep working whatever the UI language.
+            "by_kind": summary["by_kind"], "by_resident": summary["by_payer"]}),
     }
     icons = {"home": "mdi:sofa", "groceries": "mdi:cart", "car": "mdi:car", "bills": "mdi:receipt-text"}
-    for kind, label in logic.KIND_LABELS.items():
+    for kind in logic.KINDS:
         spent, budget = summary["by_kind"][kind], budgets[kind]
         out[f"sensor.home_budget_{kind}_month"] = (spent, {
-            **money_attrs, "friendly_name": f"{label} за месяц", "icon": icons[kind],
+            **money_attrs, "friendly_name": tr("sensor.kind_month", kind=logic.kind_label(kind)), "icon": icons[kind],
             "budget": budget or None, "remaining": round(budget - spent, 2) if budget else None,
             "percent": round(spent / budget * 100) if budget else None})
 
     out["sensor.home_budget_shopping_list"] = (len(db["groceries"]), {
-        "friendly_name": "Список продуктов", "icon": "mdi:format-list-checks", "unit_of_measurement": "шт.",
+        "friendly_name": tr("sensor.shopping_list"), "icon": "mdi:format-list-checks", "unit_of_measurement": tr("unit.pcs"),
         "items": [g["name"] + (f" ({g['qty']})" if g.get("qty") else "") for g in db["groceries"]]})
 
     names = {r["id"]: r["name"] for r in db["residents"]}
@@ -112,19 +118,19 @@ def sensors(db, today=None):
                         "amount": logic.num(rec.get("amount")), "payer": names.get(rec.get("payer_id")), "auto": bool(rec.get("auto"))})
     due.sort(key=lambda x: x["due"])
     out["sensor.home_budget_bills_due"] = (len(due), {
-        "friendly_name": "Платежи на неделе", "icon": "mdi:calendar-clock", "unit_of_measurement": "шт.",
+        "friendly_name": tr("sensor.bills_due"), "icon": "mdi:calendar-clock", "unit_of_measurement": tr("unit.pcs"),
         "overdue": sum(1 for x in due if x["days"] < 0), "total": round(sum(x["amount"] for x in due), 2),
         "next": due[0]["due"] if due else None, "payments": due})
 
     docs = [d for d in logic.car_docs(db, today) if d["days"] <= 30]
     out["sensor.home_budget_car_documents"] = (len(docs), {
-        "friendly_name": "Документы на авто (≤30 дн.)", "icon": "mdi:card-account-details-outline", "unit_of_measurement": "шт.",
+        "friendly_name": tr("sensor.car_documents"), "icon": "mdi:card-account-details-outline", "unit_of_measurement": tr("unit.pcs"),
         "expired": sum(1 for d in docs if d["days"] < 0),
         "documents": [{"car": logic.car_title(d["car"]), "document": d["label"], "until": d["date"].isoformat(), "days": d["days"]} for d in docs]})
 
     planned = sum(logic.num(i.get("price")) * (logic.num(i.get("qty")) or 1) for i in db["plan_items"] if i.get("status") != "bought")
     out["sensor.home_budget_home_planned"] = (round(planned, 2), {
-        **money_attrs, "state_class": None, "friendly_name": "Запланировано для дома", "icon": "mdi:home-edit"})
+        **money_attrs, "state_class": None, "friendly_name": tr("sensor.home_planned"), "icon": "mdi:home-edit"})
     return out
 
 
@@ -204,17 +210,18 @@ def _bucket(days, thresholds):
     return min(passed) if passed else None
 
 
-def _when(db, d, days):
+def _day_month(d):
+    return tr("date.day_month", day=d.day, month=i18n.month_short(d.month - 1))
+
+
+def _when(d, days):
     if days < 0:
-        return f"просрочено на {-days} дн. ({d.day} {MONTHS[d.month - 1]})"
+        return tr("when.overdue", n=-days, date=_day_month(d))
     if days == 0:
-        return "сегодня"
+        return tr("when.today")
     if days == 1:
-        return "завтра"
-    return f"через {days} дн. ({d.day} {MONTHS[d.month - 1]})"
-
-
-MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"]
+        return tr("when.tomorrow")
+    return tr("when.in_days", n=days, date=_day_month(d))
 
 
 def _ints(value, default):
@@ -243,8 +250,9 @@ def collect(db, today=None):
         payer = names.get(rec.get("payer_id"))
         out.append({
             "key": f"bill:{rec['id']}:{d.isoformat()}:{b}",
-            "title": ("⚠️ Просрочен платёж: " if days < 0 else "💳 Платёж: ") + rec.get("name", ""),
-            "message": f"{logic.money(db, logic.num(rec.get('amount')))} — {_when(db, d, days)}" + (f". Платит: {payer}" if payer else ""),
+            "title": tr("notify.bill_overdue_title" if days < 0 else "notify.bill_title", name=rec.get("name", "")),
+            "message": tr("notify.bill_message", amount=logic.money(db, logic.num(rec.get("amount"))), when=_when(d, days))
+                       + (tr("notify.bill_payer", payer=payer) if payer else ""),
             "resident_id": rec.get("payer_id"),
         })
 
@@ -255,9 +263,9 @@ def collect(db, today=None):
         car = doc["car"]
         out.append({
             "key": f"doc:{car['id']}:{doc['key']}:{doc['date'].isoformat()}:{b}",
-            "title": f"🚗 {doc['label']} — {logic.car_title(car)}",
-            "message": (f"Срок истёк {doc['date'].day} {MONTHS[doc['date'].month - 1]} ({-doc['days']} дн. назад)" if doc["days"] < 0
-                        else "Заканчивается " + _when(db, doc["date"], doc["days"])),
+            "title": tr("notify.doc_title", doc=doc["label"], car=logic.car_title(car)),
+            "message": (tr("notify.doc_expired", n=-doc["days"], date=_day_month(doc["date"])) if doc["days"] < 0
+                        else tr("notify.doc_expires", when=_when(doc["date"], doc["days"]))),
             "resident_id": car.get("owner_id"),
         })
 
@@ -273,9 +281,10 @@ def collect(db, today=None):
                 continue
             out.append({
                 "key": f"budget:{kind}:{summary['month']}:{b}",
-                "title": f"📊 Бюджет «{logic.KIND_LABELS[kind]}»: {round(pct)}%",
-                "message": f"Потрачено {logic.money(db, spent)} из {logic.money(db, budget)}"
-                           + (f", перерасход {logic.money(db, spent - budget)}" if pct >= 100 else f", осталось {logic.money(db, budget - spent)}"),
+                "title": tr("notify.budget_title", kind=logic.kind_label(kind), pct=round(pct)),
+                "message": (tr("notify.budget_over", spent=logic.money(db, spent), budget=logic.money(db, budget), diff=logic.money(db, spent - budget))
+                            if pct >= 100 else
+                            tr("notify.budget_left", spent=logic.money(db, spent), budget=logic.money(db, budget), left=logic.money(db, budget - spent))),
                 "resident_id": None,
             })
 
@@ -302,8 +311,14 @@ def wake():
 
 
 def tick(load, save, lock):
+    if client.available and i18n.ha_language is None:
+        try:
+            i18n.ha_language = client.language() or ""
+        except RuntimeError:
+            pass
     with lock:
         db = load()
+        i18n.use(i18n.resolve(db["settings"].get("language")))
         if logic.auto_pay(db):
             save(db)
         snapshot = json.loads(json.dumps(db))

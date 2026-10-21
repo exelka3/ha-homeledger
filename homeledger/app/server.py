@@ -15,8 +15,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import ha
+import i18n
 import logic
 import todo_sync
+from i18n import tr
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -43,15 +45,9 @@ DEFAULT_DB = {
     "payments": [],
     "notify_log": {},
     "settings": {
-        "currency": "₽",
-        "currency_code": "RUB",
-        "currency_position": "after",
+        "language": "auto",
         "currency_decimals": True,
-        "payment_methods": ["Карта", "Наличные", "Перевод", "Рассрочка"],
-        "rooms": ["Кухня", "Гостиная", "Спальня", "Ванная", "Прихожая", "Детская", "Балкон", "Двор"],
-        "grocery_categories": ["Овощи и фрукты", "Молочное", "Мясо и рыба", "Хлеб", "Бакалея", "Напитки", "Бытовая химия", "Другое"],
-        "car_categories": ["Топливо", "ТО и ремонт", "Шины", "Страховка", "Налог", "Штрафы", "Мойка", "Парковка", "Регистрация и документы", "Другое"],
-        "bill_categories": ["Коммунальные услуги", "Аренда и ипотека", "Кредиты", "Интернет и связь", "Подписки", "Страхование", "Налоги", "Образование и кружки", "Другое"],
+        # currency and the category lists come from localized_defaults()
         "stores": [],
         "favorite_products": [],
         "hidden_products": [],
@@ -84,6 +80,18 @@ RENAME_TARGETS = {
     "bill_categories": [("recurring", "category"), ("payments", "category")],
 }
 
+LIST_SETTINGS = ("payment_methods", "rooms", "grocery_categories", "car_categories", "bill_categories")
+CURRENCY_BY_LANGUAGE = {"ru": ("RUB", "₽", "after"), "uk": ("UAH", "₴", "after"), "pl": ("PLN", "zł", "after"),
+                        "en": ("USD", "$", "before")}
+
+
+def localized_defaults(lang):
+    """Settings a fresh install gets in its language: category lists and a likely currency."""
+    code, symbol, position = CURRENCY_BY_LANGUAGE.get(lang, ("EUR", "€", "after"))
+    return {**{key: tr(f"defaults.{key}", lang) for key in LIST_SETTINGS},
+            "currency_code": code, "currency": symbol, "currency_position": position}
+
+
 _lock = threading.Lock()
 _avatars = {}  # HA picture url -> (bytes, content type)
 
@@ -94,7 +102,9 @@ def now_iso():
 
 def load_db():
     if not DB_FILE.exists():
-        return json.loads(json.dumps(DEFAULT_DB))
+        db = json.loads(json.dumps(DEFAULT_DB))
+        db["settings"].update(localized_defaults(i18n.resolve("auto")))
+        return db
     with DB_FILE.open(encoding="utf-8") as f:
         db = json.load(f)
     for key, value in DEFAULT_DB.items():
@@ -102,7 +112,7 @@ def load_db():
     if "stores" not in db["settings"]:
         # Older databases only had store names inside trips — turn them into an editable list.
         db["settings"]["stores"] = sorted({t["store"] for t in db["trips"] if t.get("store")})
-    for key, value in DEFAULT_DB["settings"].items():
+    for key, value in {**DEFAULT_DB["settings"], **localized_defaults(i18n.resolve(db["settings"].get("language")))}.items():
         db["settings"].setdefault(key, value)
     return db
 
@@ -125,11 +135,11 @@ def checkout(db, body):
     """Close a shopping trip: checked items go to the receipt, the rest stay planned."""
     bought_ids = set(body.get("bought_ids") or [])
     if not bought_ids:
-        raise ApiError(HTTPStatus.BAD_REQUEST, "Не отмечено ни одного продукта")
+        raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.nothing_checked"))
     try:
         total = float(body.get("total") or 0)
     except (TypeError, ValueError):
-        raise ApiError(HTTPStatus.BAD_REQUEST, "Некорректная сумма чека")
+        raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.bad_total"))
 
     bought, remaining = [], []
     for item in db["groceries"]:
@@ -160,7 +170,7 @@ def rename_setting(db, body):
     key, old, new = body.get("key"), body.get("old"), (body.get("new") or "").strip()
     values = db["settings"].get(key)
     if not isinstance(values, list) or old not in values or not new:
-        raise ApiError(HTTPStatus.BAD_REQUEST, "Нечего переименовывать")
+        raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.nothing_to_rename"))
     if new in values and new != old:
         values.remove(old)  # merging into an existing value
     else:
@@ -209,7 +219,7 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             return json.loads(self.rfile.read(length).decode("utf-8"))
         except json.JSONDecodeError:
-            raise ApiError(HTTPStatus.BAD_REQUEST, "Invalid JSON")
+            raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.invalid_json"))
 
     def _api_parts(self):
         path = self.path.split("?", 1)[0]
@@ -223,7 +233,7 @@ class Handler(SimpleHTTPRequestHandler):
             resident = next((r for r in load_db()["residents"] if r["id"] == resident_id), None)
         picture = resident and resident.get("picture")
         if not picture or not ha.client.available:
-            return self._send_json({"error": "Нет аватара"}, HTTPStatus.NOT_FOUND)
+            return self._send_json({"error": tr("error.no_avatar")}, HTTPStatus.NOT_FOUND)
         if picture not in _avatars:
             try:
                 _avatars[picture] = ha.client.get_bytes(picture)
@@ -239,7 +249,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _allowed(self):
         if ALLOWED_CLIENTS and self.client_address[0] not in ALLOWED_CLIENTS:
-            self.send_error(HTTPStatus.FORBIDDEN, "Open Homeledger from the Home Assistant sidebar")
+            self.send_error(HTTPStatus.FORBIDDEN, tr("error.forbidden", "en"))
             return False
         return True
 
@@ -258,18 +268,19 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 result = todo_sync.sync(load_db, save_db, _lock)
             except Exception as e:  # noqa: BLE001
-                return self._send_json({"error": f"Синхронизация не удалась: {e}"}, HTTPStatus.BAD_GATEWAY)
+                return self._send_json({"error": tr("error.sync_failed", error=e)}, HTTPStatus.BAD_GATEWAY)
             if result is None:
-                return self._send_json({"error": "Не выбран список дел Home Assistant"}, HTTPStatus.BAD_REQUEST)
+                return self._send_json({"error": tr("error.no_todo_list")}, HTTPStatus.BAD_REQUEST)
             return self._send_json(result)
         if parts is None:
             if method == "GET":
                 return super().do_GET()
-            return self._send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
+            return self._send_json({"error": tr("error.not_found")}, HTTPStatus.NOT_FOUND)
         try:
             body = self._read_body() if method in ("POST", "PUT") else {}
             with _lock:
                 db = load_db()
+                i18n.use(i18n.resolve(db["settings"].get("language"), self.headers.get("X-Homeledger-Lang")))
                 result, changed = self._route(db, method, parts, body)
                 if changed:
                     save_db(db)
@@ -279,7 +290,7 @@ class Handler(SimpleHTTPRequestHandler):
         except ApiError as e:
             self._send_json({"error": str(e)}, e.status)
         except Exception as e:  # noqa: BLE001 — surface any bug to the UI
-            self._send_json({"error": f"Server error: {e}"}, HTTPStatus.INTERNAL_SERVER_ERROR)
+            self._send_json({"error": tr("error.server", error=e)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def _route(self, db, method, parts, body):
         if parts == ["state"] and method == "GET":
@@ -305,9 +316,9 @@ class Handler(SimpleHTTPRequestHandler):
         if len(parts) == 3 and parts[0] == "recurring" and method == "POST" and parts[2] in ("pay", "skip"):
             rec = next((r for r in db["recurring"] if r["id"] == parts[1]), None)
             if rec is None:
-                raise ApiError(HTTPStatus.NOT_FOUND, "Платёж не найден")
+                raise ApiError(HTTPStatus.NOT_FOUND, tr("error.payment_not_found"))
             if not logic.next_due(rec):
-                raise ApiError(HTTPStatus.BAD_REQUEST, "У платежа нет ближайшего срока")
+                raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.no_due_date"))
             return (logic.pay(db, rec, body) if parts[2] == "pay" else logic.skip(db, rec)), True
 
         if parts == ["settings"] and method == "PUT":
@@ -330,7 +341,7 @@ class Handler(SimpleHTTPRequestHandler):
             return {"ok": True}, True
 
         if not parts or parts[0] not in COLLECTIONS:
-            raise ApiError(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+            raise ApiError(HTTPStatus.NOT_FOUND, tr("error.unknown_endpoint"))
 
         coll = db[parts[0]]
         item_id = parts[1] if len(parts) > 1 else None
@@ -345,7 +356,7 @@ class Handler(SimpleHTTPRequestHandler):
 
         target = next((x for x in coll if x["id"] == item_id), None)
         if target is None:
-            raise ApiError(HTTPStatus.NOT_FOUND, "Запись не найдена")
+            raise ApiError(HTTPStatus.NOT_FOUND, tr("error.record_not_found"))
 
         if method == "PUT":
             body.pop("id", None)
@@ -398,13 +409,13 @@ class Handler(SimpleHTTPRequestHandler):
 
         if parts == ["test"] and method == "POST":
             if not ha.client.available:
-                raise ApiError(HTTPStatus.BAD_REQUEST, "Нет подключения к Home Assistant")
+                raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.no_ha"))
             services = [body["service"]] if body.get("service") else ha.targets(db, {})
             if not services:
-                raise ApiError(HTTPStatus.BAD_REQUEST, "Не выбран ни один сервис уведомлений")
+                raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.no_notify_service"))
             try:
                 for service in services:
-                    ha.client.notify(service, "Homeledger", "Тестовое уведомление — всё работает!")
+                    ha.client.notify(service, "Homeledger", tr("notify.test_message"))
             except RuntimeError as e:
                 raise ApiError(HTTPStatus.BAD_GATEWAY, str(e))
             return {"ok": True, "services": services}, False
@@ -416,7 +427,7 @@ class Handler(SimpleHTTPRequestHandler):
 
         if parts == ["persons", "sync"] and method == "POST":
             if not ha.client.available:
-                raise ApiError(HTTPStatus.BAD_REQUEST, "Нет подключения к Home Assistant")
+                raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.no_ha"))
             try:
                 persons = ha.fetch_persons()
             except RuntimeError as e:
@@ -427,7 +438,7 @@ class Handler(SimpleHTTPRequestHandler):
             db["notify_log"] = {}  # resend reminders that are currently due
             return {"ok": True}, True
 
-        raise ApiError(HTTPStatus.NOT_FOUND, "Unknown endpoint")
+        raise ApiError(HTTPStatus.NOT_FOUND, tr("error.unknown_endpoint"))
 
     def do_GET(self):
         self._handle("GET")
@@ -445,6 +456,11 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
+    if ha.client.available:
+        try:
+            i18n.ha_language = ha.client.language() or ""
+        except RuntimeError as e:
+            print(f"Could not read the Home Assistant language: {e}", flush=True)
     ha.start(load_db, save_db, _lock, jobs=[todo_sync.sync])
     print(f"Homeledger listening on :{PORT}, data in {DB_FILE}, Home Assistant: {ha.client.mode}", flush=True)
     server.serve_forever()

@@ -4,9 +4,15 @@ import calendar
 import uuid
 from datetime import date, datetime, timedelta
 
+from i18n import fmt_number, tr
+
 FREQ_MONTHS = {"monthly": 1, "quarterly": 3, "halfyear": 6, "yearly": 12}
-KIND_LABELS = {"home": "Обустройство", "groceries": "Продукты", "car": "Авто", "bills": "Платежи"}
-CAR_DOCS = {"osago_until": "ОСАГО", "kasko_until": "КАСКО", "inspection_until": "Техосмотр", "next_service_date": "Плановое ТО"}
+KINDS = ("home", "groceries", "car", "bills")
+CAR_DOCS = ("osago_until", "kasko_until", "inspection_until", "next_service_date")
+
+
+def kind_label(kind):
+    return tr(f"kind.{kind}")
 
 
 def parse_date(value):
@@ -123,54 +129,54 @@ def expenses(db):
         if i.get("status") == "bought":
             out.append({"kind": "home", "date": i.get("bought_at") or (i.get("updated_at") or i.get("created_at") or "")[:10],
                         "amount": num(i.get("price")) * (num(i.get("qty")) or 1), "payer_id": i.get("payer_id"),
-                        "category": plans.get(i.get("plan_id"), {}).get("room") or "Без комнаты"})
+                        "category": plans.get(i.get("plan_id"), {}).get("room") or tr("fallback.no_room")})
     for t in db["trips"]:
         out.append({"kind": "groceries", "date": t.get("date", ""), "amount": num(t.get("total")),
-                    "payer_id": t.get("payer_id"), "category": "Продукты"})
+                    "payer_id": t.get("payer_id"), "category": kind_label("groceries")})
     for x in db["car_expenses"]:
         out.append({"kind": "car", "date": x.get("date", ""), "amount": num(x.get("amount")),
-                    "payer_id": x.get("payer_id"), "category": x.get("category") or "Другое"})
+                    "payer_id": x.get("payer_id"), "category": x.get("category") or tr("fallback.other")})
     for p in db["payments"]:
         out.append({"kind": "bills", "date": p.get("date", ""), "amount": num(p.get("amount")),
-                    "payer_id": p.get("payer_id"), "category": p.get("category") or "Другое"})
+                    "payer_id": p.get("payer_id"), "category": p.get("category") or tr("fallback.other")})
     return out
 
 
 def month_summary(db, month=None):
     month = month or date.today().isoformat()[:7]
     items = [e for e in expenses(db) if str(e["date"]).startswith(month)]
-    by_kind = {k: round(sum(e["amount"] for e in items if e["kind"] == k), 2) for k in KIND_LABELS}
+    by_kind = {k: round(sum(e["amount"] for e in items if e["kind"] == k), 2) for k in KINDS}
     names = {r["id"]: r["name"] for r in db["residents"]}
     by_payer = {}
     for e in items:
-        name = names.get(e["payer_id"], "Не указано")
+        name = names.get(e["payer_id"], tr("fallback.not_set"))
         by_payer[name] = round(by_payer.get(name, 0) + e["amount"], 2)
     return {"month": month, "total": round(sum(by_kind.values()), 2), "by_kind": by_kind, "by_payer": by_payer}
 
 
 def budgets(db):
     s = db["settings"]
-    return {k: num(s.get(f"budget_{k}")) for k in KIND_LABELS}
+    return {k: num(s.get(f"budget_{k}")) for k in KINDS}
 
 
 def car_docs(db, today=None):
     today = today or date.today()
     out = []
     for car in db["cars"]:
-        for key, label in CAR_DOCS.items():
+        for key in CAR_DOCS:
             d = parse_date(car.get(key))
             if d:
-                out.append({"car": car, "key": key, "label": label, "date": d, "days": (d - today).days})
+                out.append({"car": car, "key": key, "label": tr(f"car_doc.{key}"), "date": d, "days": (d - today).days})
     return sorted(out, key=lambda x: x["days"])
 
 
 def car_title(car):
-    return car.get("name", "Авто") + (f" ({car['plate']})" if car.get("plate") else "")
+    return (car.get("name") or tr("fallback.car")) + (f" ({car['plate']})" if car.get("plate") else "")
 
 
 def money(db, value):
     s = db["settings"]
     decimals = 0 if s.get("currency_decimals") is False or float(value).is_integer() else 2
-    n = f"{value:,.{decimals}f}".replace(",", " ").replace(".", ",")
-    sym = s.get("currency", "₽")
+    n = fmt_number(value, decimals)
+    sym = s.get("currency", "€")
     return f"{sym}{n}" if s.get("currency_position") == "before" else f"{n} {sym}"

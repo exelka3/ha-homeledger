@@ -1,90 +1,93 @@
 # Homeledger
 
-Домашний бюджет внутри Home Assistant: планы обустройства, список продуктов
-с режимом «в магазине», автомобили, регулярные платежи, жители и статистика трат.
+A household budget inside Home Assistant: home improvement plans, a shared shopping
+list with an in-store mode, cars, recurring bills, residents and spending statistics.
 
-Открывается из боковой панели Home Assistant (пункт **Homeledger**). Отдельный
-порт в сеть не открывается — доступ только через Home Assistant и его учётные записи.
+Open it from the Home Assistant sidebar (**Homeledger**). No port is exposed to the
+network — access goes through Home Assistant and its user accounts only.
 
-## Разделы
+**Languages:** English, Русский, Deutsch, Français, Español, Italiano, Português,
+Nederlands, Polski, Українська, Lietuvių, Latviešu, Eesti. By default the app follows your browser / Home
+Assistant language; change it in **Settings → Language & currency**.
+Documentation in Russian: [DOCS.ru.md](https://github.com/exelka3/ha-homeledger/blob/main/homeledger/DOCS.ru.md).
 
-- **Обзор** — траты за месяц и бюджеты, ближайшие платежи, сроки документов на авто.
-- **Обустройство** — планы по комнатам, вещи с ценой, кто платит и чем.
-- **Продукты** — общий список; кнопка «Иду в магазин» включает режим, где вы
-  отмечаете купленное и вводите сумму чека. Неотмеченное остаётся в списке.
-- **Авто** — машины (госномер, VIN, СТС, ОСАГО/КАСКО/техосмотр/ТО) и расходы.
-- **Платежи** — коммуналка, ипотека, подписки: напоминания, отметка оплаты,
-  автоплатежи.
-- **Статистика** — по месяцам, жителям, разделам, категориям, магазинам.
-- **Настройки** — жители, бюджеты, валюта, справочники, Home Assistant, экспорт.
+## Sections
 
-## Жители
+- **Overview** — this month's spending and budgets, upcoming bills, car document deadlines.
+- **Home improvement** — plans by room: items with price, who pays and how.
+- **Groceries** — a shared list; **Go shopping** switches to an in-store mode where you
+  tick what you bought and enter the receipt total. Unticked items stay on the list.
+- **Cars** — cars (plate, VIN, registration, insurance, inspection and service dates) and expenses.
+- **Bills** — utilities, mortgage, subscriptions: reminders, marking as paid, auto-pay.
+- **Statistics** — by month, resident, section, category and store.
+- **Settings** — residents, budgets, language & currency, lists, Home Assistant, export.
 
-Люди из **Настройки → Люди** Home Assistant добавляются автоматически — с
-аватаром и сервисом уведомлений их телефона. Тот, кто открыл Homeledger,
-подставляется по умолчанию в «кто платит». Жителей без учётной записи HA
-(например, детей) можно добавить вручную.
+## Residents
 
-## Список покупок и Алиса
+People from Home Assistant (**Settings → People**) are added automatically, with their
+avatar and the notification service of their phone. Whoever opens Homeledger is
+pre-selected as the payer. Residents without a Home Assistant account (e.g. children)
+can be added manually.
 
-Список продуктов синхронизируется в обе стороны со списком дел Home Assistant,
-а через него — со «Списком покупок» Алисы на Яндекс Станции.
+## Shopping list and Alice (Yandex Station)
 
-Что нужно:
+The grocery list syncs both ways with a Home Assistant to-do list, and through it with
+Alice's shopping list on a Yandex Station.
 
-1. В Home Assistant — интеграция **Список покупок** (Shopping list) или
-   **Локальный список дел** (Local To-do). Подойдёт и Todoist, Google Tasks и т.п.
-2. Для Алисы — интеграция [Yandex.Station](https://github.com/AlexxIT/YandexStation)
-   из HACS, колонка в **локальном режиме** (в одной сети с HA).
-3. В Homeledger: **Настройки → Список покупок ⇄ Алиса** — выберите список и колонку.
+Requirements:
 
-Как работает:
+1. In Home Assistant — the **Shopping list** or **Local To-do** integration
+   (Todoist, Google Tasks and other to-do lists work too).
+2. For Alice — the [Yandex.Station](https://github.com/AlexxIT/YandexStation)
+   integration from HACS, with the speaker in **local mode** (same network as HA).
+3. In Homeledger: **Settings → Shopping list ⇄ Alice** — pick the list and the speaker.
 
-- «Алиса, добавь молоко в список покупок» — молоко появится в Homeledger
-  (категория подставится по прошлым покупкам).
-- Добавили, переименовали или удалили продукт в Homeledger — изменение уйдёт
-  в HA и к Алисе.
-- Купленное в режиме «В магазине» вычёркивается и у Алисы.
-- Синхронизация — раз в минуту и через пару секунд после изменений в Homeledger;
-  кнопка «Синхронизировать сейчас» запускает её сразу.
+How it works:
 
-Ограничения Яндекса: некоторые названия Алиса не принимает и молча
-отбрасывает; не очищайте вручную выполненные пункты в списке HA — Yandex.Station
-использует их, чтобы вычеркнуть пункты у Алисы.
+- "Alice, add milk to my shopping list" — milk shows up in Homeledger
+  (its category is guessed from past purchases).
+- Items added, renamed or removed in Homeledger go to Home Assistant and Alice.
+- Items bought in the in-store mode are crossed off for Alice too.
+- Sync runs every minute and a couple of seconds after changes in Homeledger;
+  **Sync now** runs it immediately.
 
-## Сенсоры
+Yandex limitations: Alice silently rejects some item names; don't clear completed items
+in the Home Assistant list by hand — Yandex.Station uses them to cross items off for Alice.
 
-Обновляются каждые 5 минут и сразу после изменений:
+## Sensors
 
-| Сенсор | Значение |
+Updated every 5 minutes and right after changes:
+
+| Sensor | Value |
 | --- | --- |
-| `sensor.home_budget_month_total` | траты за текущий месяц (в атрибутах — по разделам и жителям) |
-| `sensor.home_budget_groceries_month` | продукты за месяц, бюджет, остаток, % |
-| `sensor.home_budget_home_month` | обустройство за месяц |
-| `sensor.home_budget_car_month` | авто за месяц |
-| `sensor.home_budget_bills_month` | регулярные платежи за месяц |
-| `sensor.home_budget_shopping_list` | продуктов в списке (атрибут `items`) |
-| `sensor.home_budget_bills_due` | платежи на ближайшую неделю (атрибут `payments`) |
-| `sensor.home_budget_car_documents` | документы на авто, истекающие в течение 30 дней |
-| `sensor.home_budget_home_planned` | сколько осталось купить по планам |
+| `sensor.home_budget_month_total` | spending this month (attributes `by_kind`, `by_resident`) |
+| `sensor.home_budget_groceries_month` | groceries this month, with `budget`, `remaining`, `percent` |
+| `sensor.home_budget_home_month` | home improvement this month |
+| `sensor.home_budget_car_month` | car expenses this month |
+| `sensor.home_budget_bills_month` | recurring bills this month |
+| `sensor.home_budget_shopping_list` | items on the shopping list (attribute `items`) |
+| `sensor.home_budget_bills_due` | bills due within a week (attribute `payments`) |
+| `sensor.home_budget_car_documents` | car documents expiring within 30 days |
+| `sensor.home_budget_home_planned` | what is still to buy for the home |
 
-Сенсоры публикуются через API и после перезапуска Home Assistant появляются
-снова в течение 5 минут.
+Sensor names follow the app language; entity IDs and attribute keys are always English,
+so automations keep working when the language changes. The sensors are published through
+the API and reappear within 5 minutes after Home Assistant restarts.
 
-## Уведомления
+## Notifications
 
-Настраиваются в **Настройки → Home Assistant**:
+Configure in **Settings → Home Assistant**:
 
-- о платежах — за N дней и в день срока (по умолчанию за 3 дня и в день),
-  тому, кто платит;
-- о документах на авто — за 30, 7, 1 день и в день окончания, владельцу машины;
-- о бюджете — при 80% и 100%.
+- bills — N days before and on the due date (default: 3 days before and on the day),
+  sent to whoever pays;
+- car documents — 30, 7, 1 days before and on the expiry date, sent to the car owner;
+- budgets — at 80% and 100%.
 
-Получатели — сервисы `notify.*` (например `notify.mobile_app_pixel_8`).
-Ночью (с 22:00 до указанного часа) уведомления не отправляются. Кнопка
-«Отправить тест» проверяет доставку.
+Recipients are `notify.*` services (e.g. `notify.mobile_app_pixel_8`). Nothing is sent at
+night (from 22:00 until the configured hour). **Send test** checks delivery.
+Notifications use the app language.
 
-## Данные и резервные копии
+## Data and backups
 
-Все данные хранятся в одном файле `/data/db.json` и попадают в резервные копии
-Home Assistant. Экспорт и импорт в JSON — в **Настройках → Данные**.
+All data lives in a single file, `/data/db.json`, and is included in Home Assistant
+backups. JSON export and import are in **Settings → Data**.

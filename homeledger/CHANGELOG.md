@@ -1,21 +1,33 @@
 # Changelog
 
+## 1.2.0
+
+- Multilingual: English, Русский, Deutsch, Français, Español, Italiano, Português,
+  Nederlands, Polski, Українська, Lietuvių, Latviešu, Eesti. The language follows the browser / Home Assistant
+  by default and can be set in **Settings → Language & currency**.
+- Notifications and sensor names use the app language; dates, months and numbers are
+  formatted for the selected language.
+- New installs get category lists and a currency matching their language.
+- **Breaking:** attributes of `sensor.home_budget_month_total` are now `by_kind`
+  (keys `home`, `groceries`, `car`, `bills`) and `by_resident`, instead of
+  Russian-named attributes. Update automations that read them.
+
 ## 1.1.0
 
-- Двусторонняя синхронизация списка продуктов со списком дел Home Assistant (`todo.*`).
-- Через интеграцию Yandex.Station — со «Списком покупок» Алисы: добавленное голосом
-  появляется в Homeledger, купленное в магазине вычёркивается у Алисы.
-- Пришедшие из HA продукты получают категорию по истории покупок.
+- Two-way sync of the grocery list with a Home Assistant to-do list (`todo.*`).
+- Through the Yandex.Station integration — with Alice's shopping list: items added by
+  voice appear in Homeledger, items bought in the store are crossed off for Alice.
+- Items coming from Home Assistant get a category based on purchase history.
 
 ## 1.0.0
 
-Первый выпуск.
+First release.
 
-- Обзор месяца с бюджетами по разделам.
-- Планы обустройства с вещами, ценами, плательщиком и способом оплаты.
-- Список продуктов, режим «в магазине», история чеков, подсказки частых покупок.
-- Автомобили: регистрационные данные, сроки документов, расходы.
-- Регулярные платежи: напоминания, отметка оплаты, пропуск, автоплатежи.
-- Статистика: по месяцам, жителям, разделам, категориям и магазинам.
-- Интеграция с Home Assistant: жители из `person.*`, сенсоры, уведомления.
-- Настройки валюты, справочников, экспорт и импорт данных.
+- Monthly overview with budgets per section.
+- Home improvement plans with items, prices, payer and payment method.
+- Grocery list, in-store mode, receipt history, frequent-purchase suggestions.
+- Cars: registration details, document deadlines, expenses.
+- Recurring bills: reminders, mark as paid, skip, auto-pay.
+- Statistics by month, resident, section, category and store.
+- Home Assistant integration: residents from `person.*`, sensors, notifications.
+- Currency settings, editable lists, data export and import.
