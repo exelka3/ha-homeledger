@@ -311,7 +311,7 @@ class Handler(SimpleHTTPRequestHandler):
         if parts == ["ha", "todo", "sync"] and method == "POST":
             # Runs outside the db lock: it talks to HA and takes the lock itself.
             try:
-                result = todo_sync.sync(load_db, save_db, _lock)
+                result = todo_sync.sync(load_db, save_db, _lock, with_station=True)
             except Exception as e:  # noqa: BLE001
                 return self._send_json({"error": tr("error.sync_failed", error=e)}, HTTPStatus.BAD_GATEWAY)
             if result is None:

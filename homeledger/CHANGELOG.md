@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- Sync with Alice is now manual only: the **Sync with Alice** button on the Groceries tab.
+  Yandex.Station makes the speaker read the list aloud on every sync, so it no longer runs
+  in the background. The Home Assistant to-do list still syncs automatically.
+- The sync button moved from Settings to the Groceries tab.
+
 ## 1.2.2
 
 - Fixed: after an update the browser or the Home Assistant app could keep showing the

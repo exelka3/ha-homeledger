@@ -3,7 +3,8 @@
 Chain: Alice's shopping list <-> Yandex.Station integration <-> todo.* in HA <-> Homeledger.
 The Yandex.Station integration (AlexxIT) syncs Alice with a To-do entity when asked via
 media_player.play_media(media_content_type=shopping_list, media_content_id=<todo entity>),
-so we ask it before reading the list and again after we changed it.
+so we ask it before reading the list and again after we changed it — but only for a manual sync:
+the speaker reads the list aloud every time, so the background job never calls it.
 
 db["todo_sync"]["links"] maps a To-do item uid to {"gid": grocery id, "summary": text last seen on
 both sides}; comparing against it tells which side added, removed or renamed an item.
@@ -100,11 +101,13 @@ def reconcile(db, entity, items):
     return ops, counts
 
 
-def sync(load, save, lock):
-    """Run one sync round. Returns None when sync isn't configured."""
+def sync(load, save, lock, with_station=False):
+    """Run one sync round with the HA To-do list; with_station also syncs Alice (speaks out loud).
+    Returns None when sync isn't configured."""
     with lock:
         settings = load()["settings"]
-    entity, station = settings.get("todo_entity"), settings.get("yandex_station")
+    entity = settings.get("todo_entity")
+    station = settings.get("yandex_station") if with_station else None
     if not entity or not ha.client.available:
         return None
     if not _running.acquire(blocking=False):

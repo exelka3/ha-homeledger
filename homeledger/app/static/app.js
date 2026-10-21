@@ -569,8 +569,9 @@ function groceries() {
   const s = db.settings;
   const alice = t("todo.alice");
   return `
-    <div class="row"><h2>${t("groceries.list_title")}</h2>${s.todo_entity
-      ? `<span class="badge" title="${esc(t(s.yandex_station ? "groceries.synced_with_alice" : "groceries.synced_with", { entity: s.todo_entity }))}">⇄ ${s.yandex_station ? esc(alice) : "Home Assistant"}</span>` : ""}<span class="spacer"></span>
+    <div class="row"><h2>${t("groceries.list_title")}</h2><span class="spacer"></span>
+      ${s.todo_entity
+        ? `<button class="btn big" id="todo-sync" title="${esc(t(s.yandex_station ? "groceries.synced_with_alice" : "groceries.synced_with", { entity: s.todo_entity }))}">⇄ ${esc(s.yandex_station ? t("groceries.sync_alice") : t("todo.sync_now"))}</button>` : ""}
       <button class="btn primary big" id="start-shop" ${db.groceries.length ? "" : "disabled"}>${t("groceries.start_shopping")}</button></div>
     <div class="card">
       <form class="add-bar" id="add-grocery">
@@ -1013,7 +1014,7 @@ function todoCard(s) {
         <label class="field"><span>${t("todo.entity")}</span><select name="todo_entity">${current(s.todo_entity, t("todo.no_sync"))}</select></label>
         <label class="field"><span>${t("todo.station")}</span><select name="yandex_station">${current(s.yandex_station, t("todo.no_alice"))}</select></label>
       </div>
-      <div class="row"><button class="btn primary sm">${t("common.save")}</button><button type="button" class="btn sm" id="todo-sync-now">${t("todo.sync_now")}</button></div>
+      <div class="row"><button class="btn primary sm">${t("common.save")}</button></div>
     </form>
     <div id="todo-status" class="muted small" style="margin-top:12px"></div>
     <details style="margin-top:10px"><summary class="small">${t("todo.requirements")}</summary><ol class="small muted" style="padding-left:18px;margin:8px 0 0">
@@ -1055,18 +1056,20 @@ function bindTodoCard() {
     e.preventDefault();
     mutate("PUT", "settings", { todo_entity: form.todo_entity.value, yandex_station: form.yandex_station.value }, t("todo.saved"));
   };
-  $("#todo-sync-now").onclick = async (e) => {
-    e.target.disabled = true;
-    try {
-      const st = await api("POST", "ha/todo/sync", {});
-      await reload();
-      toast(t("todo.synced_toast", st));
-    } catch (err) {
-      toast(err.message, true);
-    } finally {
-      if (e.target.isConnected) e.target.disabled = false;
-    }
-  };
+}
+
+// Manual sync, including Alice when a speaker is chosen (the speaker reads the list aloud, so never automatic).
+async function runTodoSync(button) {
+  button.disabled = true;
+  try {
+    const st = await api("POST", "ha/todo/sync", {});
+    await reload();
+    toast(t("todo.synced_toast", st));
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    if (button.isConnected) button.disabled = false;
+  }
 }
 
 function bindHaCard() {
@@ -1374,6 +1377,8 @@ const bind = {
     $("#view").onchange = null;
     if (ui.shopping) return bindShopping();
     $("#start-shop").onclick = () => { ui.shopping = { checked: [] }; saveShopping(); render(); };
+    const sync = $("#todo-sync");
+    if (sync) sync.onclick = () => runTodoSync(sync);
     $("#add-grocery").onsubmit = async (e) => {
       e.preventDefault();
       const v = Object.fromEntries(new FormData(e.target).entries());

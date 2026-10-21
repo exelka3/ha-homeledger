@@ -44,12 +44,15 @@ Requirements:
 
 How it works:
 
-- "Alice, add milk to my shopping list" — milk shows up in Homeledger
-  (its category is guessed from past purchases).
+- "Alice, add milk to my shopping list" — milk shows up in Homeledger after the next
+  “Sync with Alice” (its category is guessed from past purchases).
 - Items added, renamed or removed in Homeledger go to Home Assistant and Alice.
-- Items bought in the in-store mode are crossed off for Alice too.
-- Sync runs every minute and a couple of seconds after changes in Homeledger;
-  **Sync now** runs it immediately.
+- Items bought in the in-store mode are crossed off for Alice too (on the next sync with Alice).
+- Changes in Homeledger reach the Home Assistant list automatically (every minute and
+  a couple of seconds after each change).
+- Alice's list syncs **only when you tap “Sync with Alice”** on the Groceries tab: the
+  speaker reads the list aloud whenever Yandex.Station syncs it, so this never runs on
+  its own.
 
 Yandex limitations: Alice silently rejects some item names; don't clear completed items
 in the Home Assistant list by hand — Yandex.Station uses them to cross items off for Alice.
