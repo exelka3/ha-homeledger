@@ -52,7 +52,6 @@
   "kind.groceries": "Mercado",
   "kind.car": "Carro",
   "kind.bills": "Contas",
-  "unit.thousand_short": "k",
   "unit.km": "{v} km",
   "unit.liters": "{v} L",
   "due.today": "hoje",

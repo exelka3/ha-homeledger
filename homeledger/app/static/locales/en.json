@@ -49,7 +49,6 @@
   "kind.groceries": "Groceries",
   "kind.car": "Car",
   "kind.bills": "Bills",
-  "unit.thousand_short": "k",
   "unit.km": "{v} km",
   "unit.liters": "{v} L",
   "due.today": "today",

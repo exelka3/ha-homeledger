@@ -55,7 +55,6 @@
   "kind.groceries": "Zakupy spożywcze",
   "kind.car": "Samochód",
   "kind.bills": "Rachunki",
-  "unit.thousand_short": "k",
   "unit.km": "{v} km",
   "unit.liters": "{v} l",
   "due.today": "dziś",

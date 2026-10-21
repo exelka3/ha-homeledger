@@ -49,7 +49,6 @@
   "kind.groceries": "Toidukaubad",
   "kind.car": "Auto",
   "kind.bills": "Arved",
-  "unit.thousand_short": "k",
   "unit.km": "{v} km",
   "unit.liters": "{v} l",
   "due.today": "täna",

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Compact amounts in the monthly chart and the per-resident table now keep one decimal
+  ("143.3k", "1.2M" instead of "143k"); the exact amount is in the tooltip.
+- Averages (average receipt, per-month averages, fixed costs per month) are no longer
+  rounded to whole units; they are shown to the cent.
+
 ## 1.2.0
 
 - Multilingual: English, Русский, Deutsch, Français, Español, Italiano, Português,

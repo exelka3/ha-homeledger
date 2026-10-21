@@ -47,10 +47,19 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const today = () => new Date().toISOString().slice(0, 10);
 const num = (v) => (Number.isFinite(+v) ? +v : 0);
 function money(v, settings = db?.settings || {}) {
-  const decimals = settings.currency_decimals === false ? 0 : num(v) % 1 ? 2 : 0;
-  const n = fmtNumber(num(v), decimals);
+  const cents = Math.round(num(v) * 100) / 100; // money is exact to the cent; drops float noise from averages
+  const decimals = settings.currency_decimals === false ? 0 : cents % 1 ? 2 : 0;
+  const n = fmtNumber(cents, decimals);
   const sym = settings.currency || "₽";
   return settings.currency_position === "before" ? sym + n : n + " " + sym;
+}
+// Compact amount for tight spots (chart labels, month table): one decimal, e.g. 1,3k / 143,3k / 1,2M.
+// The exact amount is always in the tooltip.
+function compactMoney(v) {
+  const abs = Math.abs(num(v));
+  const [div, suffix] = abs >= 1e6 ? [1e6, "M"] : abs >= 1e3 ? [1e3, "k"] : [1, ""];
+  const value = new Intl.NumberFormat(locale(), { maximumFractionDigits: div === 1 ? 2 : 1 }).format(num(v) / div);
+  return value + suffix;
 }
 const monthKey = (d) => String(d || "").slice(0, 7);
 // "YYYY-MM" -> short month name, optionally with the year.
@@ -283,7 +292,7 @@ function monthlyColumns(list, months = 12) {
       const tip = `${monthLabel(d.k, true)}: ${money(d.tot)}\n` +
         kinds.filter((k) => d.byKind[k]).map((k) => `${kindName(k)}: ${money(d.byKind[k])}`).join("\n");
       return `<div class="col" title="${esc(tip)}">
-        <div class="val">${d.tot ? shortMoney(d.tot) : ""}</div>
+        <div class="val">${d.tot ? compactMoney(d.tot) : ""}</div>
         <div class="stack" style="height:${(d.tot / max) * 140}px">
           ${kinds.map((k) => `<div style="height:${d.tot ? (d.byKind[k] / d.tot) * 100 : 0}%;background:${KINDS[k].color}"></div>`).join("")}
         </div>
@@ -293,7 +302,6 @@ function monthlyColumns(list, months = 12) {
     <div class="legend">${kinds.map((k) => `<span><i class="dot" style="background:${KINDS[k].color}"></i>${kindName(k)}</span>`).join("")}</div>`;
 }
 
-const shortMoney = (v) => (v >= 1000 ? Math.round(v / 1000) + t("unit.thousand_short") : String(Math.round(v)));
 
 function lastMonths(n) {
   const now = new Date();
@@ -656,7 +664,7 @@ function cars() {
       <div class="card kpi"><div class="label">${t("overview.kind_month", { kind: kindName("car") })}</div><div class="value num">${money(sumAmount(month))}</div>
         ${budgetBar(sumAmount(month), db.settings.budget_car)}</div>
       <div class="card kpi"><div class="label">${t("cars.last_12m")}</div><div class="value num">${money(sumAmount(year))}</div>
-        <div class="sub">${t("cars.per_month", { amount: money(Math.round(sumAmount(year) / 12)) })}</div></div>
+        <div class="sub">${t("cars.per_month", { amount: money(sumAmount(year) / 12) })}</div></div>
       <div class="card kpi wide"><div class="label">${t("cars.month_by_category")}</div>
         <div style="margin-top:6px">${sumBy(month, (e) => e.category).slice(0, 4)
           .map(([k, v]) => `<div class="row small" style="flex-wrap:nowrap"><span>${esc(k)}</span><span class="spacer"></span><span class="num">${money(v)}</span></div>`).join("") || '<span class="muted small">—</span>'}</div></div>
@@ -824,7 +832,7 @@ function bills() {
         ${budgetBar(sumAmount(paidThisMonth.map((p) => ({ amount: num(p.amount) }))), db.settings.budget_bills)}</div>
       <div class="card kpi"><div class="label">${t("bills.left_this_month")}</div><div class="value num">${money(leftThisMonth.reduce((s, r) => s + num(r.amount), 0))}</div>
         <div class="sub">${t("bills.count", { n: leftThisMonth.length })}${leftThisMonth.some((r) => daysUntil(r.next_due) < 0) ? ` · <span style="color:var(--danger)">${t("bills.has_overdue")}</span>` : ""}</div></div>
-      <div class="card kpi wide"><div class="label">${t("bills.fixed_per_month")}</div><div class="value num">${money(Math.round(perMonth))}</div>
+      <div class="card kpi wide"><div class="label">${t("bills.fixed_per_month")}</div><div class="value num">${money(perMonth)}</div>
         <div class="sub">${t("bills.active_count", { n: active.length })}</div></div>
     </div>
 
@@ -1131,7 +1139,7 @@ function stats() {
       <div class="card kpi"><div class="label">${t("stats.total")}</div><div class="value num">${money(sumAmount(ex))}</div><div class="sub">${t("common.transactions", { n: ex.length })}</div></div>
       <div class="card kpi"><div class="label">${kindName("home")}</div><div class="value num">${money(sumAmount(home))}</div><div class="sub">${t("stats.purchases", { n: home.length })}</div></div>
       <div class="card kpi"><div class="label">${kindName("groceries")}</div><div class="value num">${money(grocTotal)}</div>
-        <div class="sub">${t("stats.trips", { n: trips.length })} · ${t("stats.avg_receipt", { amount: money(trips.length ? Math.round(grocTotal / trips.length) : 0) })}</div></div>
+        <div class="sub">${t("stats.trips", { n: trips.length })} · ${t("stats.avg_receipt", { amount: money(trips.length ? grocTotal / trips.length : 0) })}</div></div>
       <div class="card kpi"><div class="label">${kindName("car")}</div><div class="value num">${money(sumAmount(car))}</div><div class="sub">${t("stats.expenses", { n: car.length })}</div></div>
       <div class="card kpi"><div class="label">${t("bills.title")}</div><div class="value num">${money(sumAmount(bills))}</div><div class="sub">${t("stats.payments", { n: bills.length })}</div></div>
     </div>
@@ -1161,7 +1169,7 @@ function stats() {
       <div class="card"><h3>${t("stats.bills_top")}</h3>${barsHtml(sumBy(bills, (e) => e.title).slice(0, 10))}</div>
       <div class="card"><h3>${t("stats.top_products")}</h3>
         ${topProducts.length ? `<ul class="list">${topProducts.map(([n, c]) => `<li><div class="grow">${esc(n)}</div><span class="muted small">${t("stats.times", { n: c })}</span></li>`).join("")}</ul>` : `<div class="empty small">${t("common.no_data")}</div>`}
-        ${boughtCount + skipped ? `<div class="muted small" style="margin-top:8px">${t("stats.list_completion", { pct: Math.round((boughtCount / (boughtCount + skipped)) * 100), amount: money(Math.round(grocTotal / months)) })}</div>` : ""}
+        ${boughtCount + skipped ? `<div class="muted small" style="margin-top:8px">${t("stats.list_completion", { pct: Math.round((boughtCount / (boughtCount + skipped)) * 100), amount: money(grocTotal / months) })}</div>` : ""}
       </div>
     </div>`;
 }
@@ -1183,13 +1191,13 @@ function residentMonthMatrix(list, n) {
       return `<tr><td>${name(id)}</td>${keys.map((k) => {
         const items = cell(id, k);
         const v = sumAmount(items);
-        const tip = Object.keys(KINDS).map((kind) => [kind, sumAmount(items.filter((e) => e.kind === kind))]).filter(([, s]) => s)
+        const tip = (v ? money(v) + "\n" : "") + Object.keys(KINDS).map((kind) => [kind, sumAmount(items.filter((e) => e.kind === kind))]).filter(([, s]) => s)
           .map(([kind, s]) => `${kindName(kind)}: ${money(s)}`).join("\n");
-        return `<td class="num heat" title="${esc(tip)}">${v ? shortMoney(v) : '<span class="muted">—</span>'}
+        return `<td class="num heat" title="${esc(tip)}">${v ? compactMoney(v) : '<span class="muted">—</span>'}
           ${v ? `<span class="cell-bar" style="width:${(v / max) * 100}%;background:${color}"></span>` : ""}</td>`;
-      }).join("")}<td class="num"><b>${money(rowTotal)}</b></td><td class="num muted">${money(Math.round(rowTotal / n))}</td></tr>`;
+      }).join("")}<td class="num"><b>${money(rowTotal)}</b></td><td class="num muted">${money(rowTotal / n)}</td></tr>`;
     }).join("")}
-    <tr class="total"><td>${t("stats.total_row")}</td>${keys.map((k) => `<td class="num">${colTotal(k) ? shortMoney(colTotal(k)) : "—"}</td>`).join("")}
+    <tr class="total"><td>${t("stats.total_row")}</td>${keys.map((k) => `<td class="num" title="${colTotal(k) ? esc(money(colTotal(k))) : ""}">${colTotal(k) ? compactMoney(colTotal(k)) : "—"}</td>`).join("")}
       <td class="num">${money(sumAmount(list.filter((e) => keys.includes(monthKey(e.date)))))}</td><td></td></tr>
     </tbody></table></div>`;
 }

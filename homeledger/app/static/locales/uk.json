@@ -55,7 +55,6 @@
   "kind.groceries": "Продукти",
   "kind.car": "Авто",
   "kind.bills": "Платежі",
-  "unit.thousand_short": "k",
   "unit.km": "{v} км",
   "unit.liters": "{v} л",
   "due.today": "сьогодні",

@@ -52,7 +52,6 @@
   "kind.groceries": "Pārtika",
   "kind.car": "Auto",
   "kind.bills": "Rēķini",
-  "unit.thousand_short": "k",
   "unit.km": "{v} km",
   "unit.liters": "{v} l",
   "due.today": "šodien",
