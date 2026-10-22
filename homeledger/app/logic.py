@@ -42,15 +42,40 @@ def add_months(d, months, day):
 
 def next_period(rec, d):
     freq = rec.get("frequency", "monthly")
+    if freq == "daily":
+        return d + timedelta(days=1)
     if freq == "weekly":
         return d + timedelta(days=7)
     anchor = parse_date(rec.get("start_date")) or d
     return add_months(d, FREQ_MONTHS.get(freq, 1), anchor.day)
 
 
+def period_key(freq, d):
+    """Calendar period a date falls in: day, ISO week, month, quarter, half-year or year.
+    Keys of one frequency sort chronologically as strings."""
+    if freq == "daily":
+        return d.isoformat()
+    if freq == "weekly":
+        year, week, _ = d.isocalendar()
+        return f"{year}-W{week:02d}"
+    if freq == "quarterly":
+        return f"{d.year}-Q{(d.month - 1) // 3 + 1}"
+    if freq == "halfyear":
+        return f"{d.year}-H{(d.month - 1) // 6 + 1}"
+    if freq == "yearly":
+        return str(d.year)
+    return f"{d.year}-{d.month:02d}"
+
+
+def has_schedule(rec):
+    """Only a payment with a first payment date has due dates, reminders and "overdue"."""
+    return parse_date(rec.get("start_date")) is not None
+
+
 def next_due(rec):
-    """Date of the first period that is neither paid nor skipped, or None when the payment is over."""
-    if rec.get("active") is False:
+    """Date of the first period that is neither paid nor skipped, or None when the payment is over
+    or has no schedule (no first payment date)."""
+    if rec.get("active") is False or not has_schedule(rec):
         return None
     last = parse_date(rec.get("last_period"))
     due = next_period(rec, last) if last else parse_date(rec.get("start_date"))
@@ -60,10 +85,46 @@ def next_due(rec):
     return due
 
 
+def paid_in_period(db, rec, key):
+    freq = rec.get("frequency", "monthly")
+    return any(p.get("recurring_id") == rec["id"] and (d := parse_date(p.get("date"))) and period_key(freq, d) == key
+               for p in db["payments"])
+
+
+def is_finished(rec, today=None):
+    today = today or date.today()
+    end = parse_date(rec.get("end_date"))
+    if rec.get("active") is False or (end and end < today):
+        return True
+    return has_schedule(rec) and next_due(rec) is None
+
+
+def can_pay(db, rec, on=None):
+    """A payment can be marked once per calendar period: never ahead of time, never twice.
+    Scheduled payments pay their due period (overdue ones can be caught up); unscheduled ones
+    pay the period of the payment date if nothing was paid in it yet."""
+    on = on or date.today()
+    if is_finished(rec, on):
+        return False
+    freq = rec.get("frequency", "monthly")
+    if has_schedule(rec):
+        due = next_due(rec)
+        return bool(due) and period_key(freq, due) <= period_key(freq, on)
+    return not paid_in_period(db, rec, period_key(freq, on))
+
+
 def with_next_due(db):
-    """Copy of the db for the API, with next_due computed for each recurring payment."""
+    """Copy of the db for the API, with the schedule state of each recurring payment."""
+    today = date.today()
     out = dict(db)
-    out["recurring"] = [{**r, "next_due": (d.isoformat() if (d := next_due(r)) else None)} for r in db["recurring"]]
+    out["recurring"] = [{
+        **r,
+        "next_due": (d.isoformat() if (d := next_due(r)) else None),
+        "scheduled": has_schedule(r),
+        "finished": is_finished(r, today),
+        "can_pay": can_pay(db, r, today),
+        "paid_this_period": paid_in_period(db, r, period_key(r.get("frequency", "monthly"), today)),
+    } for r in db["recurring"]]
     out.pop("notify_log", None)
     return out
 
@@ -76,14 +137,16 @@ def recompute_last_period(db, rec):
 
 def pay(db, rec, body, auto=False):
     due = next_due(rec)
-    period = body.get("period") or (due.isoformat() if due else None)
+    paid_on = body.get("date") or date.today().isoformat()
+    # Scheduled: the due period; unscheduled: the period the payment date falls in.
+    period = body.get("period") or (due.isoformat() if due else paid_on)
     payment = {
         "id": new_id(),
         "recurring_id": rec["id"],
         "name": rec.get("name", ""),
         "category": rec.get("category", ""),
         "amount": num(body.get("amount", rec.get("amount"))),
-        "date": body.get("date") or date.today().isoformat(),
+        "date": paid_on,
         "payer_id": body.get("payer_id", rec.get("payer_id")) or None,
         "payment_method": body.get("payment_method", rec.get("payment_method")) or "",
         "period": period,

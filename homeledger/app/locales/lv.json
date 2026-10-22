@@ -125,5 +125,6 @@
     "Nodokļi",
     "Izglītība un pulciņi",
     "Cits"
-  ]
+  ],
+  "error.already_paid": "Par šo periodu jau samaksāts"
 }

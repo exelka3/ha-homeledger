@@ -122,5 +122,6 @@
     "Steuern",
     "Bildung & Freizeit",
     "Sonstiges"
-  ]
+  ],
+  "error.already_paid": "Für diesen Zeitraum bereits bezahlt"
 }

@@ -122,5 +122,6 @@
     "Taxes",
     "Education & activities",
     "Other"
-  ]
+  ],
+  "error.already_paid": "Already paid for this period"
 }

@@ -125,5 +125,6 @@
     "Impuestos",
     "Formación y actividades",
     "Otros"
-  ]
+  ],
+  "error.already_paid": "Ya está pagado para este periodo"
 }

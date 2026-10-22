@@ -128,5 +128,6 @@
     "Mokesčiai",
     "Mokslai ir būreliai",
     "Kita"
-  ]
+  ],
+  "error.already_paid": "Už šį laikotarpį jau sumokėta"
 }

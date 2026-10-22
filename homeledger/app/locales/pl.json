@@ -128,5 +128,6 @@
     "Podatki",
     "Edukacja i zajęcia",
     "Inne"
-  ]
+  ],
+  "error.already_paid": "Już zapłacone za ten okres"
 }

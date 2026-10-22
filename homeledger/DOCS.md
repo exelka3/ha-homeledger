@@ -19,6 +19,8 @@ Documentation in Russian: [DOCS.ru.md](https://github.com/exelka3/ha-homeledger/
   tick what you bought and enter the receipt total. Unticked items stay on the list.
 - **Cars** — cars (plate, VIN, registration, insurance, inspection and service dates) and expenses.
 - **Bills** — utilities, mortgage, subscriptions: reminders, marking as paid, auto-pay.
+  **Paid** can be marked once per calendar period (day, week, month, quarter, half-year,
+  year). The first payment date is optional: without it there are no due dates or reminders.
 - **Statistics** — by month, resident, section, category and store.
 - **Settings** — residents, budgets, language & currency, lists, Home Assistant, export.
 

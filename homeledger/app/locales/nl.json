@@ -122,5 +122,6 @@
     "Belastingen",
     "Opleiding & hobby's",
     "Overig"
-  ]
+  ],
+  "error.already_paid": "Al betaald voor deze periode"
 }

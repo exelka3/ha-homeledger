@@ -125,5 +125,6 @@
     "Tasse",
     "Scuola e attività",
     "Altro"
-  ]
+  ],
+  "error.already_paid": "Già pagato per questo periodo"
 }

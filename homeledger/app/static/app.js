@@ -133,6 +133,13 @@ function openForm({ title, fields, submitLabel = t("common.save"), onSubmit, onD
     closeModal();
     await onDelete();
   };
+  $("#modal-form").onclick = (e) => {
+    const name = e.target.closest("[data-clear-date]")?.dataset.clearDate;
+    if (!name) return;
+    const input = e.currentTarget.elements[name];
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
   $("#modal-form").onsubmit = async (e) => {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.target).entries());
@@ -163,6 +170,10 @@ function fieldHtml(f) {
     const list = f.datalist ? `list="dl-${f.name}"` : "";
     input = `<input type="${f.type || "text"}" name="${f.name}" value="${esc(v)}" ${req} ${extra} ${list} placeholder="${esc(f.placeholder || "")}">`;
     if (f.datalist) input += `<datalist id="dl-${f.name}">${f.datalist.map((o) => `<option value="${esc(o)}">`).join("")}</datalist>`;
+    // Mobile date pickers (iOS in particular) can't erase a date, so optional dates get a clear button.
+    if (f.type === "date" && !f.required) {
+      input = `<div class="date-wrap">${input}<button type="button" class="icon-btn" data-clear-date="${f.name}" title="${esc(t("common.clear"))}" aria-label="${esc(t("common.clear"))}">✕</button></div>`;
+    }
   }
   return `<label class="field"><span>${esc(f.label)}</span>${input}</label>`;
 }
@@ -782,9 +793,9 @@ function carExpenseForm(x = {}) {
 }
 
 // Bills (recurring payments) ------------------------------------------------
-const FREQUENCIES = ["weekly", "monthly", "quarterly", "halfyear", "yearly"];
+const FREQUENCIES = ["daily", "weekly", "monthly", "quarterly", "halfyear", "yearly"];
 const freqName = (f) => (FREQUENCIES.includes(f) ? t("freq." + f) : "");
-const PER_MONTH = { weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, halfyear: 1 / 6, yearly: 1 / 12 };
+const PER_MONTH = { daily: 365 / 12, weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, halfyear: 1 / 6, yearly: 1 / 12 };
 
 const daysUntil = (d) => Math.round((new Date(d) - new Date(today())) / 86400000);
 const recurringById = (id) => db.recurring.find((r) => r.id === id);
@@ -796,24 +807,43 @@ function dueChip(date) {
   return `<span class="doc ${cls}" title="${fmtDate(date)}">${text} · ${fmtDate(date)}</span>`;
 }
 
+// Without a first payment date there's no due date: show whether this calendar period is paid.
+function periodChip(r) {
+  const f = FREQUENCIES.includes(r.frequency) ? r.frequency : "monthly";
+  return r.paid_this_period
+    ? `<span class="doc ok">${t("bills.paid_period." + f)}</span>`
+    : `<span class="doc">${t("bills.unpaid_period." + f)}</span>`;
+}
+
 // One row of an upcoming payment with its actions; shared by Overview and Bills.
+// "Paid" works once per calendar period, so it's disabled until the next period starts.
 function dueRow(r) {
+  const f = FREQUENCIES.includes(r.frequency) ? r.frequency : "monthly";
+  const pay = r.can_pay
+    ? `<button class="btn sm primary" data-pay="${r.id}">${t("bills.mark_paid")}</button>`
+    : `<button class="btn sm" disabled title="${esc(t("bills.paid_period." + f))}">${t("bills.mark_paid")}</button>`;
+  const skip = r.scheduled && r.can_pay
+    ? `<button class="btn sm ghost" data-skip="${r.id}" title="${esc(t("bills.skip_hint"))}">${t("bills.skip")}</button>` : "";
   const actions = r.auto
     ? `<span class="badge" title="${esc(t("bills.auto_hint"))}">${t("bills.auto_badge")}</span>`
-    : `<button class="btn sm primary" data-pay="${r.id}">${t("bills.mark_paid")}</button><button class="btn sm ghost" data-skip="${r.id}" title="${esc(t("bills.skip_hint"))}">${t("bills.skip")}</button>`;
+    : pay + skip;
   return `<li><div class="grow"><div class="title">${esc(r.name)}</div>
       <div class="muted small">${esc(r.category || "")}${r.payer_id ? "" : " · " + t("bills.no_payer")}</div></div>
     ${r.payer_id ? residentChip(r.payer_id) : ""}
-    <span class="num">${r.variable ? "≈ " : ""}${money(r.amount)}</span>${dueChip(r.next_due)}
+    <span class="num">${r.variable ? "≈ " : ""}${money(r.amount)}</span>${r.scheduled ? dueChip(r.next_due) : periodChip(r)}
     <span class="row" style="flex-wrap:nowrap">${actions}</span></li>`;
 }
 
 function bills() {
   const nowMonth = today().slice(0, 7);
-  const active = db.recurring.filter((r) => r.next_due);
-  const finished = db.recurring.filter((r) => !r.next_due);
-  const due = [...active].sort((a, b) => (a.next_due < b.next_due ? -1 : 1));
-  const leftThisMonth = active.filter((r) => r.next_due.slice(0, 7) <= nowMonth);
+  const active = db.recurring.filter((r) => !r.finished);
+  const finished = db.recurring.filter((r) => r.finished);
+  // Scheduled payments by due date, then unscheduled ones (unpaid first).
+  const due = [...active].sort((a, b) =>
+    (b.scheduled - a.scheduled) || (a.scheduled ? (a.next_due < b.next_due ? -1 : 1) : (a.paid_this_period - b.paid_this_period)));
+  const leftThisMonth = active.filter((r) => r.scheduled
+    ? r.next_due.slice(0, 7) <= nowMonth
+    : ["daily", "weekly", "monthly"].includes(r.frequency || "monthly") && !r.paid_this_period);
   const paidThisMonth = db.payments.filter((p) => monthKey(p.date) === nowMonth);
   const perMonth = active.reduce((s, r) => s + num(r.amount) * (PER_MONTH[r.frequency] || 1), 0);
   const history = [...db.payments].sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -832,7 +862,7 @@ function bills() {
       <div class="card kpi"><div class="label">${t("bills.paid_this_month")}</div><div class="value num">${money(sumAmount(paidThisMonth.map((p) => ({ amount: num(p.amount) }))))}</div>
         ${budgetBar(sumAmount(paidThisMonth.map((p) => ({ amount: num(p.amount) }))), db.settings.budget_bills)}</div>
       <div class="card kpi"><div class="label">${t("bills.left_this_month")}</div><div class="value num">${money(leftThisMonth.reduce((s, r) => s + num(r.amount), 0))}</div>
-        <div class="sub">${t("bills.count", { n: leftThisMonth.length })}${leftThisMonth.some((r) => daysUntil(r.next_due) < 0) ? ` · <span style="color:var(--danger)">${t("bills.has_overdue")}</span>` : ""}</div></div>
+        <div class="sub">${t("bills.count", { n: leftThisMonth.length })}${leftThisMonth.some((r) => r.scheduled && daysUntil(r.next_due) < 0) ? ` · <span style="color:var(--danger)">${t("bills.has_overdue")}</span>` : ""}</div></div>
       <div class="card kpi wide"><div class="label">${t("bills.fixed_per_month")}</div><div class="value num">${money(perMonth)}</div>
         <div class="sub">${t("bills.active_count", { n: active.length })}</div></div>
     </div>
@@ -876,7 +906,7 @@ function recurringForm(r = {}) {
         { name: "variable", label: t("form.amount"), type: "select", value: r.variable ? "1" : "", options: [["", t("bills.amount_fixed")], ["1", t("bills.amount_variable")]] },
       ] },
       { type: "row", fields: [
-        { name: "start_date", label: t("bills.start_date"), type: "date", value: r.start_date || today(), required: true },
+        { name: "start_date", label: t("bills.start_date_optional"), type: "date", value: r.start_date || "" },
         { name: "end_date", label: t("bills.end_date"), type: "date", value: r.end_date },
       ] },
       { type: "row", fields: [
@@ -889,7 +919,12 @@ function recurringForm(r = {}) {
       ] },
       { name: "note", label: t("form.note"), value: r.note, placeholder: t("bills.note_placeholder") },
     ],
+    note: t("bills.no_schedule_hint"),
     onSubmit: (v) => {
+      if (v.auto === "1" && !v.start_date) {
+        toast(t("bills.auto_needs_date"), true);
+        throw new Error("auto needs a start date"); // keeps the form open
+      }
       v.auto = v.auto === "1";
       v.variable = v.variable === "1";
       v.active = v.active !== "0";
@@ -901,7 +936,7 @@ function recurringForm(r = {}) {
 
 function payForm(r) {
   openForm({
-    title: t("bills.pay_title", { name: r.name, date: fmtDate(r.next_due) }),
+    title: r.scheduled ? t("bills.pay_title", { name: r.name, date: fmtDate(r.next_due) }) : t("bills.pay_title_simple", { name: r.name }),
     submitLabel: t("bills.mark_payment"),
     fields: [
       { type: "row", fields: [

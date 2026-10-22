@@ -383,3 +383,10 @@ details summary:hover { color: var(--text); }
 /* Callout cards on the overview (reminders). */
 .card.callout { border-left: 3px solid var(--accent); }
 .card.callout.warn { border-left-color: var(--warn); }
+
+/* Optional date with a clear button (mobile pickers can't erase a date). */
+.date-wrap { display: flex; align-items: center; gap: 4px; }
+.date-wrap input { flex: 1; min-width: 0; }
+/* Native date inputs have a wide intrinsic size; let grid columns shrink them. */
+.fields-2 > * { min-width: 0; }
+input[type="date"] { min-width: 0; }

@@ -11,7 +11,7 @@ import re
 import threading
 import time
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -362,8 +362,12 @@ class Handler(SimpleHTTPRequestHandler):
             rec = next((r for r in db["recurring"] if r["id"] == parts[1]), None)
             if rec is None:
                 raise ApiError(HTTPStatus.NOT_FOUND, tr("error.payment_not_found"))
-            if not logic.next_due(rec):
+            if parts[2] == "skip" and not logic.has_schedule(rec):
                 raise ApiError(HTTPStatus.BAD_REQUEST, tr("error.no_due_date"))
+            # Once per calendar period: for an unscheduled payment that's the period of the chosen date.
+            on = (logic.parse_date(body.get("date")) if parts[2] == "pay" and not logic.has_schedule(rec) else None) or date.today()
+            if on > date.today() or not logic.can_pay(db, rec, on):
+                raise ApiError(HTTPStatus.CONFLICT, tr("error.already_paid"))
             return (logic.pay(db, rec, body) if parts[2] == "pay" else logic.skip(db, rec)), True
 
         if parts == ["settings"] and method == "PUT":

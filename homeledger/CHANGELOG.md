@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0
+
+- Recurring bills: the first payment date is optional. Without it there are no due dates,
+  reminders or "overdue" — the bill just shows whether the current period is paid.
+- **Paid** can be marked once per calendar period: once a day, week, calendar month,
+  quarter, half-year (Jan–Jun / Jul–Dec) or year. Paying ahead for a future period is no
+  longer possible; overdue past periods can still be caught up. The server enforces it too.
+- New frequency: daily.
+- Optional date fields get a clear (✕) button — mobile date pickers can't erase a date.
+- Automatic payments require a first payment date.
+
 ## 1.3.0
 
 - Sync with Alice is now manual only: the **Sync with Alice** button on the Groceries tab.

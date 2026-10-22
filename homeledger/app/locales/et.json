@@ -122,5 +122,6 @@
     "Maksud",
     "Haridus ja huviringid",
     "Muu"
-  ]
+  ],
+  "error.already_paid": "Selle perioodi eest on juba makstud"
 }
