@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0
+
+- One-time payments: a new "One-time" frequency for bills that don't repeat. With a date it
+  has a due date and a reminder; without one it can be marked paid once. After payment it
+  moves to finished bills. One-time payments don't count towards fixed costs per month.
+
 ## 1.5.0
 
 - Recurring bills are grouped into category cards (e.g. Pets → food, pills, vet; Car →

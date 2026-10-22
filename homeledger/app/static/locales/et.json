@@ -490,5 +490,8 @@
   "bills.category_placeholder": "Lemmikloomad, Auto…",
   "bills.category_required": "Sisesta kategooria nimi",
   "bills.add_category_prompt": "Uue kategooria nimi",
-  "bills.category_exists": "Selline kategooria on juba olemas"
+  "bills.category_exists": "Selline kategooria on juba olemas",
+  "freq.once": "Ühekordselt",
+  "bills.paid_period.once": "Makstud",
+  "bills.unpaid_period.once": "Maksmata"
 }

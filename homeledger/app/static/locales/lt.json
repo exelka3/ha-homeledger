@@ -522,5 +522,8 @@
   "bills.category_placeholder": "Gyvūnai, Automobilis…",
   "bills.category_required": "Įveskite kategorijos pavadinimą",
   "bills.add_category_prompt": "Naujos kategorijos pavadinimas",
-  "bills.category_exists": "Tokia kategorija jau yra"
+  "bills.category_exists": "Tokia kategorija jau yra",
+  "freq.once": "Vieną kartą",
+  "bills.paid_period.once": "Sumokėta",
+  "bills.unpaid_period.once": "Nesumokėta"
 }

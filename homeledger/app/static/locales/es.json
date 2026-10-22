@@ -506,5 +506,8 @@
   "bills.category_placeholder": "Mascotas, Coche…",
   "bills.category_required": "Escribe el nombre de la categoría",
   "bills.add_category_prompt": "Nombre de la nueva categoría",
-  "bills.category_exists": "Esta categoría ya existe"
+  "bills.category_exists": "Esta categoría ya existe",
+  "freq.once": "Una vez",
+  "bills.paid_period.once": "Pagado",
+  "bills.unpaid_period.once": "No pagado"
 }

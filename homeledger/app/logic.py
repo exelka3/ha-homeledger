@@ -42,6 +42,8 @@ def add_months(d, months, day):
 
 def next_period(rec, d):
     freq = rec.get("frequency", "monthly")
+    if freq == "once":
+        return None  # a one-time payment has no next period
     if freq == "daily":
         return d + timedelta(days=1)
     if freq == "weekly":
@@ -53,6 +55,8 @@ def next_period(rec, d):
 def period_key(freq, d):
     """Calendar period a date falls in: day, ISO week, month, quarter, half-year or year.
     Keys of one frequency sort chronologically as strings."""
+    if freq == "once":
+        return "once"  # the whole life of the payment is a single period
     if freq == "daily":
         return d.isoformat()
     if freq == "weekly":
@@ -91,12 +95,15 @@ def paid_in_period(db, rec, key):
                for p in db["payments"])
 
 
-def is_finished(rec, today=None):
+def is_finished(rec, today=None, db=None):
     today = today or date.today()
     end = parse_date(rec.get("end_date"))
     if rec.get("active") is False or (end and end < today):
         return True
-    return has_schedule(rec) and next_due(rec) is None
+    if has_schedule(rec):
+        return next_due(rec) is None
+    # An unscheduled one-time payment is over once it has been paid.
+    return rec.get("frequency") == "once" and db is not None and any(p.get("recurring_id") == rec["id"] for p in db["payments"])
 
 
 def can_pay(db, rec, on=None):
@@ -104,7 +111,7 @@ def can_pay(db, rec, on=None):
     Scheduled payments pay their due period (overdue ones can be caught up); unscheduled ones
     pay the period of the payment date if nothing was paid in it yet."""
     on = on or date.today()
-    if is_finished(rec, on):
+    if is_finished(rec, on, db):
         return False
     freq = rec.get("frequency", "monthly")
     if has_schedule(rec):
@@ -121,7 +128,7 @@ def with_next_due(db):
         **r,
         "next_due": (d.isoformat() if (d := next_due(r)) else None),
         "scheduled": has_schedule(r),
-        "finished": is_finished(r, today),
+        "finished": is_finished(r, today, db),
         "can_pay": can_pay(db, r, today),
         "paid_this_period": paid_in_period(db, r, period_key(r.get("frequency", "monthly"), today)),
     } for r in db["recurring"]]

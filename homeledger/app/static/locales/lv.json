@@ -506,5 +506,8 @@
   "bills.category_placeholder": "Mājdzīvnieki, Auto…",
   "bills.category_required": "Ievadiet kategorijas nosaukumu",
   "bills.add_category_prompt": "Jaunās kategorijas nosaukums",
-  "bills.category_exists": "Šāda kategorija jau ir"
+  "bills.category_exists": "Šāda kategorija jau ir",
+  "freq.once": "Vienreiz",
+  "bills.paid_period.once": "Samaksāts",
+  "bills.unpaid_period.once": "Nav samaksāts"
 }

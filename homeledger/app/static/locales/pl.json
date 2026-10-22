@@ -522,5 +522,8 @@
   "bills.category_placeholder": "Zwierzęta, Samochód…",
   "bills.category_required": "Wpisz nazwę kategorii",
   "bills.add_category_prompt": "Nazwa nowej kategorii",
-  "bills.category_exists": "Taka kategoria już istnieje"
+  "bills.category_exists": "Taka kategoria już istnieje",
+  "freq.once": "Jednorazowo",
+  "bills.paid_period.once": "Zapłacone",
+  "bills.unpaid_period.once": "Niezapłacone"
 }

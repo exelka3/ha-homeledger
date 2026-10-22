@@ -490,5 +490,8 @@
   "bills.category_placeholder": "Huisdieren, Auto…",
   "bills.category_required": "Voer de naam van de categorie in",
   "bills.add_category_prompt": "Naam van de nieuwe categorie",
-  "bills.category_exists": "Deze categorie bestaat al"
+  "bills.category_exists": "Deze categorie bestaat al",
+  "freq.once": "Eenmalig",
+  "bills.paid_period.once": "Betaald",
+  "bills.unpaid_period.once": "Niet betaald"
 }

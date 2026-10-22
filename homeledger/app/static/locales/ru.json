@@ -522,5 +522,8 @@
   "bills.category_placeholder": "Животные, Авто…",
   "bills.category_required": "Введите название категории",
   "bills.add_category_prompt": "Название новой категории",
-  "bills.category_exists": "Такая категория уже есть"
+  "bills.category_exists": "Такая категория уже есть",
+  "freq.once": "Один раз",
+  "bills.paid_period.once": "Оплачено",
+  "bills.unpaid_period.once": "Не оплачено"
 }

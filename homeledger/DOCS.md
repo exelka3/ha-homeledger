@@ -23,6 +23,7 @@ Documentation in Russian: [DOCS.ru.md](https://github.com/exelka3/ha-homeledger/
   year). The first payment date is optional: without it there are no due dates or reminders.
   Bills are grouped by category (Pets, Car, Utilities…); create categories with
   **＋ Category** or **＋ New category…** in the bill form.
+  A **one-time** bill is paid once and then moves to finished bills.
 - **Statistics** — by month, resident, section, category and store.
 - **Settings** — residents, budgets, language & currency, lists, Home Assistant, export.
 

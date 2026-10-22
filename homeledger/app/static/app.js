@@ -794,9 +794,10 @@ function carExpenseForm(x = {}) {
 }
 
 // Bills (recurring payments) ------------------------------------------------
-const FREQUENCIES = ["daily", "weekly", "monthly", "quarterly", "halfyear", "yearly"];
+const FREQUENCIES = ["daily", "weekly", "monthly", "quarterly", "halfyear", "yearly", "once"];
 const freqName = (f) => (FREQUENCIES.includes(f) ? t("freq." + f) : "");
-const PER_MONTH = { daily: 365 / 12, weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, halfyear: 1 / 6, yearly: 1 / 12 };
+// Share of a monthly budget; a one-time payment isn't a recurring cost.
+const PER_MONTH = { daily: 365 / 12, weekly: 52 / 12, monthly: 1, quarterly: 1 / 3, halfyear: 1 / 6, yearly: 1 / 12, once: 0 };
 
 const daysUntil = (d) => Math.round((new Date(d) - new Date(today())) / 86400000);
 const recurringById = (id) => db.recurring.find((r) => r.id === id);
@@ -846,7 +847,7 @@ function bills() {
     ? r.next_due.slice(0, 7) <= nowMonth
     : ["daily", "weekly", "monthly"].includes(r.frequency || "monthly") && !r.paid_this_period);
   const paidThisMonth = db.payments.filter((p) => monthKey(p.date) === nowMonth);
-  const perMonth = active.reduce((s, r) => s + num(r.amount) * (PER_MONTH[r.frequency] || 1), 0);
+  const perMonth = active.reduce((s, r) => s + num(r.amount) * (PER_MONTH[r.frequency] ?? 1), 0);
   const history = [...db.payments].sort((a, b) => (a.date < b.date ? 1 : -1));
   const groups = new Map(db.settings.bill_categories.map((c) => [c, []]));
   for (const r of active) {
@@ -855,7 +856,7 @@ function bills() {
     groups.get(c).push(r);
   }
   const autoBadge = ` <span class="badge">${t("bills.auto_badge")}</span>`;
-  const perMonthOf = (list) => list.reduce((sum, r) => sum + num(r.amount) * (PER_MONTH[r.frequency] || 1), 0);
+  const perMonthOf = (list) => list.reduce((sum, r) => sum + num(r.amount) * (PER_MONTH[r.frequency] ?? 1), 0);
   const filled = [...groups.entries()].filter(([, list]) => list.length);
   const empty = [...groups.entries()].filter(([, list]) => !list.length);
 
@@ -881,7 +882,7 @@ function bills() {
     ${filled.length ? `<div class="grid cat-grid">${filled.map(([cat, list]) => `<div class="card">
       <div class="row"><h3>${esc(cat)}</h3><span class="spacer"></span>
         <button class="icon-btn" data-add-in="${esc(cat)}" title="${esc(t("bills.add_in", { category: cat }))}">＋</button></div>
-      <div class="muted small" style="margin:-6px 0 6px">${t("bills.category_summary", { n: list.length, amount: money(perMonthOf(list)) })}</div>
+      <div class="muted small" style="margin:-6px 0 6px">${perMonthOf(list) ? t("bills.category_summary", { n: list.length, amount: money(perMonthOf(list)) }) : t("bills.count", { n: list.length })}</div>
       <ul class="list">${list.map((r) => `<li>
         <div class="grow"><div class="title">${esc(r.name)}${r.auto ? autoBadge : ""}</div>
           <div class="muted small">${freqName(r.frequency)}${r.payment_method ? " · " + esc(r.payment_method) : ""}${r.end_date ? " · " + t("common.until", { date: fmtDate(r.end_date) }) : ""}${r.note ? " · " + esc(r.note) : ""}</div></div>
@@ -920,7 +921,7 @@ function recurringForm(r = {}) {
       ] },
       { type: "row", fields: [
         { name: "start_date", label: t("bills.start_date_optional"), type: "date", value: r.start_date || "" },
-        { name: "end_date", label: t("bills.end_date"), type: "date", value: r.end_date },
+        { name: "end_date", label: t("bills.end_date"), type: "date", value: r.end_date, hidden: r.frequency === "once" },
       ] },
       { type: "row", fields: [
         { name: "payer_id", label: t("form.who_pays"), type: "select", value: r.id ? r.payer_id : meId(), options: residentOptions() },
@@ -934,6 +935,10 @@ function recurringForm(r = {}) {
     ],
     note: t("bills.no_schedule_hint"),
     onChange: (form, e) => {
+      if (e.target.name === "frequency") {
+        form.querySelector('[data-field="end_date"]').hidden = form.frequency.value === "once"; // nothing comes after a one-time payment
+        return;
+      }
       if (e.target.name !== "category") return;
       const box = form.querySelector('[data-field="category_new"]');
       box.hidden = form.category.value !== "__new__";
@@ -949,6 +954,7 @@ function recurringForm(r = {}) {
         await addBillCategory(v.category);
       }
       delete v.category_new;
+      if (v.frequency === "once") v.end_date = "";
       if (v.auto === "1" && !v.start_date) {
         toast(t("bills.auto_needs_date"), true);
         throw new Error("auto needs a start date"); // keeps the form open

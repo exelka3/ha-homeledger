@@ -506,5 +506,8 @@
   "bills.category_placeholder": "Pets, Carro…",
   "bills.category_required": "Digite o nome da categoria",
   "bills.add_category_prompt": "Nome da nova categoria",
-  "bills.category_exists": "Essa categoria já existe"
+  "bills.category_exists": "Essa categoria já existe",
+  "freq.once": "Uma vez",
+  "bills.paid_period.once": "Pago",
+  "bills.unpaid_period.once": "Não pago"
 }
