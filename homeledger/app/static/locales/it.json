@@ -490,5 +490,21 @@
   "bills.unpaid_period.monthly": "Non pagato questo mese",
   "bills.unpaid_period.quarterly": "Non pagato questo trimestre",
   "bills.unpaid_period.halfyear": "Non pagato questo semestre",
-  "bills.unpaid_period.yearly": "Non pagato quest'anno"
+  "bills.unpaid_period.yearly": "Non pagato quest'anno",
+  "bills.categories_title": "Per categoria",
+  "bills.add_category": "Categoria",
+  "bills.manage_categories": "Modifica categorie",
+  "bills.add_in": "Aggiungi una bolletta a “{category}”",
+  "bills.category_summary": {
+    "one": "{n} bolletta · ≈ {amount} al mese",
+    "many": "{n} bollette · ≈ {amount} al mese",
+    "other": "{n} bollette · ≈ {amount} al mese"
+  },
+  "bills.empty_categories": "Altre categorie:",
+  "bills.new_category_option": "＋ Nuova categoria…",
+  "bills.new_category_name": "Nome della nuova categoria",
+  "bills.category_placeholder": "Animali, Auto…",
+  "bills.category_required": "Inserisci il nome della categoria",
+  "bills.add_category_prompt": "Nome della nuova categoria",
+  "bills.category_exists": "Questa categoria esiste già"
 }

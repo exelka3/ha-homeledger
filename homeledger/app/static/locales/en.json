@@ -475,5 +475,20 @@
   "bills.unpaid_period.monthly": "Not paid this month",
   "bills.unpaid_period.quarterly": "Not paid this quarter",
   "bills.unpaid_period.halfyear": "Not paid this half-year",
-  "bills.unpaid_period.yearly": "Not paid this year"
+  "bills.unpaid_period.yearly": "Not paid this year",
+  "bills.categories_title": "By category",
+  "bills.add_category": "Category",
+  "bills.manage_categories": "Edit categories",
+  "bills.add_in": "Add a bill to “{category}”",
+  "bills.category_summary": {
+    "one": "{n} bill · ≈ {amount} a month",
+    "other": "{n} bills · ≈ {amount} a month"
+  },
+  "bills.empty_categories": "Other categories:",
+  "bills.new_category_option": "＋ New category…",
+  "bills.new_category_name": "New category name",
+  "bills.category_placeholder": "Pets, Car…",
+  "bills.category_required": "Enter the category name",
+  "bills.add_category_prompt": "New category name",
+  "bills.category_exists": "This category already exists"
 }

@@ -116,7 +116,7 @@ function toast(msg, isError = false) {
 }
 
 // --- modal form ------------------------------------------------------------
-function openForm({ title, fields, submitLabel = t("common.save"), onSubmit, onDelete, note = "" }) {
+function openForm({ title, fields, submitLabel = t("common.save"), onSubmit, onDelete, note = "", onChange = null }) {
   $("#modal-title").textContent = title;
   $("#modal-submit").textContent = submitLabel;
   $("#modal-body").innerHTML = fields
@@ -140,6 +140,7 @@ function openForm({ title, fields, submitLabel = t("common.save"), onSubmit, onD
     input.value = "";
     input.dispatchEvent(new Event("input", { bubbles: true }));
   };
+  $("#modal-form").onchange = onChange ? (e) => onChange(e.currentTarget, e) : null;
   $("#modal-form").onsubmit = async (e) => {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.target).entries());
@@ -175,7 +176,7 @@ function fieldHtml(f) {
       input = `<div class="date-wrap">${input}<button type="button" class="icon-btn" data-clear-date="${f.name}" title="${esc(t("common.clear"))}" aria-label="${esc(t("common.clear"))}">✕</button></div>`;
     }
   }
-  return `<label class="field"><span>${esc(f.label)}</span>${input}</label>`;
+  return `<label class="field" data-field="${f.name}" ${f.hidden ? "hidden" : ""}><span>${esc(f.label)}</span>${input}</label>`;
 }
 
 function closeModal() {
@@ -847,13 +848,16 @@ function bills() {
   const paidThisMonth = db.payments.filter((p) => monthKey(p.date) === nowMonth);
   const perMonth = active.reduce((s, r) => s + num(r.amount) * (PER_MONTH[r.frequency] || 1), 0);
   const history = [...db.payments].sort((a, b) => (a.date < b.date ? 1 : -1));
-  const groups = new Map();
+  const groups = new Map(db.settings.bill_categories.map((c) => [c, []]));
   for (const r of active) {
     const c = r.category || t("common.other");
     if (!groups.has(c)) groups.set(c, []);
     groups.get(c).push(r);
   }
   const autoBadge = ` <span class="badge">${t("bills.auto_badge")}</span>`;
+  const perMonthOf = (list) => list.reduce((sum, r) => sum + num(r.amount) * (PER_MONTH[r.frequency] || 1), 0);
+  const filled = [...groups.entries()].filter(([, list]) => list.length);
+  const empty = [...groups.entries()].filter(([, list]) => !list.length);
 
   return `
     <div class="row"><h2>${t("bills.title")}</h2><span class="spacer"></span>
@@ -871,16 +875,23 @@ function bills() {
       ${due.length ? `<ul class="list due-list">${due.slice(0, 12).map(dueRow).join("")}</ul>` : `<div class="empty">${t("bills.empty")}</div>`}
     </div>
 
-    ${groups.size ? `<div class="card"><h3>${t("bills.all")}</h3>
-      ${[...groups.entries()].map(([cat, list]) => `<div class="cat-title">${esc(cat)}</div><ul class="list">${list.map((r) => `<li>
+    <div class="row" style="margin:24px 0 12px"><h3 style="margin:0">${t("bills.categories_title")}</h3><span class="spacer"></span>
+      <button class="btn sm" id="add-bill-category">＋ ${t("bills.add_category")}</button>
+      <button class="btn sm ghost" data-goto="settings">${t("bills.manage_categories")}</button></div>
+    ${filled.length ? `<div class="grid cat-grid">${filled.map(([cat, list]) => `<div class="card">
+      <div class="row"><h3>${esc(cat)}</h3><span class="spacer"></span>
+        <button class="icon-btn" data-add-in="${esc(cat)}" title="${esc(t("bills.add_in", { category: cat }))}">＋</button></div>
+      <div class="muted small" style="margin:-6px 0 6px">${t("bills.category_summary", { n: list.length, amount: money(perMonthOf(list)) })}</div>
+      <ul class="list">${list.map((r) => `<li>
         <div class="grow"><div class="title">${esc(r.name)}${r.auto ? autoBadge : ""}</div>
           <div class="muted small">${freqName(r.frequency)}${r.payment_method ? " · " + esc(r.payment_method) : ""}${r.end_date ? " · " + t("common.until", { date: fmtDate(r.end_date) }) : ""}${r.note ? " · " + esc(r.note) : ""}</div></div>
         ${residentChip(r.payer_id)}<span class="num">${r.variable ? "≈ " : ""}${money(r.amount)}</span>
-        <button class="icon-btn" data-edit-recurring="${r.id}" title="${esc(t("common.edit"))}">✎</button></li>`).join("")}</ul>`).join("")}
-      ${finished.length ? `<div class="cat-title">${t("bills.finished")}</div><ul class="list">${finished.map((r) => `<li class="muted">
+        <button class="icon-btn" data-edit-recurring="${r.id}" title="${esc(t("common.edit"))}">✎</button></li>`).join("")}</ul></div>`).join("")}</div>` : ""}
+    ${empty.length ? `<div class="suggest" style="margin:12px 0"><span class="muted small">${t("bills.empty_categories")}</span>
+      ${empty.map(([cat]) => `<button data-add-in="${esc(cat)}" title="${esc(t("bills.add_in", { category: cat }))}">＋ ${esc(cat)}</button>`).join("")}</div>` : ""}
+    ${finished.length ? `<div class="card" style="margin-top:12px"><div class="cat-title">${t("bills.finished")}</div><ul class="list">${finished.map((r) => `<li class="muted">
         <div class="grow">${esc(r.name)}</div><span class="num">${money(r.amount)}</span>
-        <button class="icon-btn" data-edit-recurring="${r.id}" title="${esc(t("common.edit"))}">✎</button></li>`).join("")}</ul>` : ""}
-    </div>` : ""}
+        <button class="icon-btn" data-edit-recurring="${r.id}" title="${esc(t("common.edit"))}">✎</button></li>`).join("")}</ul></div>` : ""}
 
     <div class="card"><h3>${t("bills.history")}</h3>
       ${history.length ? `<ul class="list">${history.slice(0, 30).map((p) => `<li>
@@ -898,9 +909,11 @@ function recurringForm(r = {}) {
     fields: [
       { name: "name", label: t("form.name"), value: r.name, required: true, placeholder: t("bills.name_placeholder") },
       { type: "row", fields: [
-        { name: "category", label: t("form.category"), type: "select", value: r.category || db.settings.bill_categories[0], options: db.settings.bill_categories.map((c) => [c, c]) },
+        { name: "category", label: t("form.category"), type: "select", value: r.category || db.settings.bill_categories[0],
+          options: [...db.settings.bill_categories.map((c) => [c, c]), ["__new__", t("bills.new_category_option")]] },
         { name: "frequency", label: t("bills.frequency"), type: "select", value: r.frequency || "monthly", options: FREQUENCIES.map((f) => [f, freqName(f)]) },
       ] },
+      { name: "category_new", label: t("bills.new_category_name"), hidden: true, placeholder: t("bills.category_placeholder") },
       { type: "row", fields: [
         { name: "amount", label: t("form.amount_currency", { currency: db.settings.currency }), type: "number", value: r.amount, required: true },
         { name: "variable", label: t("form.amount"), type: "select", value: r.variable ? "1" : "", options: [["", t("bills.amount_fixed")], ["1", t("bills.amount_variable")]] },
@@ -920,7 +933,22 @@ function recurringForm(r = {}) {
       { name: "note", label: t("form.note"), value: r.note, placeholder: t("bills.note_placeholder") },
     ],
     note: t("bills.no_schedule_hint"),
-    onSubmit: (v) => {
+    onChange: (form, e) => {
+      if (e.target.name !== "category") return;
+      const box = form.querySelector('[data-field="category_new"]');
+      box.hidden = form.category.value !== "__new__";
+      if (!box.hidden) form.category_new.focus();
+    },
+    onSubmit: async (v) => {
+      if (v.category === "__new__") {
+        v.category = (v.category_new || "").trim();
+        if (!v.category) {
+          toast(t("bills.category_required"), true);
+          throw new Error("category required"); // keeps the form open
+        }
+        await addBillCategory(v.category);
+      }
+      delete v.category_new;
       if (v.auto === "1" && !v.start_date) {
         toast(t("bills.auto_needs_date"), true);
         throw new Error("auto needs a start date"); // keeps the form open
@@ -932,6 +960,14 @@ function recurringForm(r = {}) {
     },
     onDelete: r.id ? () => mutate("DELETE", `recurring/${r.id}`, null, t("bills.deleted")) : null,
   });
+}
+
+// Adds a category to the bill categories list (no-op when it already exists, case-insensitive).
+async function addBillCategory(name) {
+  const list = db.settings.bill_categories;
+  if (list.some((c) => c.toLowerCase() === name.toLowerCase())) return false;
+  db.settings = await api("PUT", "settings", { bill_categories: [...list, name] });
+  return true;
 }
 
 function payForm(r) {
@@ -1380,9 +1416,22 @@ const bind = {
 
   bills() {
     $("#add-recurring").onclick = () => recurringForm();
+    $("#add-bill-category").onclick = async () => {
+      const name = prompt(t("bills.add_category_prompt"))?.trim();
+      if (!name) return;
+      try {
+        if (!(await addBillCategory(name))) toast(t("bills.category_exists"), true);
+        await reload();
+        recurringForm({ category: db.settings.bill_categories.find((c) => c.toLowerCase() === name.toLowerCase()) });
+      } catch (err) {
+        toast(err.message, true);
+      }
+    };
     $("#view").onclick = (e) => {
-      const el = e.target.closest("[data-pay],[data-skip],[data-edit-recurring],[data-edit-payment]");
+      const el = e.target.closest("[data-pay],[data-skip],[data-edit-recurring],[data-edit-payment],[data-add-in],[data-goto]");
       if (!el) return;
+      if (el.dataset.addIn) return recurringForm({ category: el.dataset.addIn });
+      if (el.dataset.goto) return $(`#tabs [data-view="${el.dataset.goto}"]`).click();
       handleDueAction(el);
       if (el.dataset.editRecurring) recurringForm(recurringById(el.dataset.editRecurring));
       if (el.dataset.editPayment) paymentForm(db.payments.find((p) => p.id === el.dataset.editPayment));

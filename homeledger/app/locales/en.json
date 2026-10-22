@@ -121,6 +121,7 @@
     "Insurance",
     "Taxes",
     "Education & activities",
+    "Pets",
     "Other"
   ],
   "error.already_paid": "Already paid for this period"

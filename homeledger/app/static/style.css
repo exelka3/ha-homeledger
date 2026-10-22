@@ -390,3 +390,6 @@ details summary:hover { color: var(--text); }
 /* Native date inputs have a wide intrinsic size; let grid columns shrink them. */
 .fields-2 > * { min-width: 0; }
 input[type="date"] { min-width: 0; }
+
+/* Bill categories: at most two columns so bill names don't wrap. */
+.grid.cat-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); }

@@ -490,5 +490,21 @@
   "bills.unpaid_period.monthly": "Nav samaksāts šomēnes",
   "bills.unpaid_period.quarterly": "Nav samaksāts šajā ceturksnī",
   "bills.unpaid_period.halfyear": "Nav samaksāts šajā pusgadā",
-  "bills.unpaid_period.yearly": "Nav samaksāts šogad"
+  "bills.unpaid_period.yearly": "Nav samaksāts šogad",
+  "bills.categories_title": "Pa kategorijām",
+  "bills.add_category": "Kategorija",
+  "bills.manage_categories": "Rediģēt kategorijas",
+  "bills.add_in": "Pievienot rēķinu kategorijai “{category}”",
+  "bills.category_summary": {
+    "zero": "{n} rēķinu · ≈ {amount} mēnesī",
+    "one": "{n} rēķins · ≈ {amount} mēnesī",
+    "other": "{n} rēķini · ≈ {amount} mēnesī"
+  },
+  "bills.empty_categories": "Pārējās kategorijas:",
+  "bills.new_category_option": "＋ Jauna kategorija…",
+  "bills.new_category_name": "Jaunās kategorijas nosaukums",
+  "bills.category_placeholder": "Mājdzīvnieki, Auto…",
+  "bills.category_required": "Ievadiet kategorijas nosaukumu",
+  "bills.add_category_prompt": "Jaunās kategorijas nosaukums",
+  "bills.category_exists": "Šāda kategorija jau ir"
 }

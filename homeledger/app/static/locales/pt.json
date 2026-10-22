@@ -490,5 +490,21 @@
   "bills.unpaid_period.monthly": "Não pago este mês",
   "bills.unpaid_period.quarterly": "Não pago este trimestre",
   "bills.unpaid_period.halfyear": "Não pago este semestre",
-  "bills.unpaid_period.yearly": "Não pago este ano"
+  "bills.unpaid_period.yearly": "Não pago este ano",
+  "bills.categories_title": "Por categoria",
+  "bills.add_category": "Categoria",
+  "bills.manage_categories": "Editar categorias",
+  "bills.add_in": "Adicionar uma conta a “{category}”",
+  "bills.category_summary": {
+    "one": "{n} conta · ≈ {amount} por mês",
+    "many": "{n} contas · ≈ {amount} por mês",
+    "other": "{n} contas · ≈ {amount} por mês"
+  },
+  "bills.empty_categories": "Outras categorias:",
+  "bills.new_category_option": "＋ Nova categoria…",
+  "bills.new_category_name": "Nome da nova categoria",
+  "bills.category_placeholder": "Pets, Carro…",
+  "bills.category_required": "Digite o nome da categoria",
+  "bills.add_category_prompt": "Nome da nova categoria",
+  "bills.category_exists": "Essa categoria já existe"
 }

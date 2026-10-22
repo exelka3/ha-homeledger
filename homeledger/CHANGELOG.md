@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0
+
+- Recurring bills are grouped into category cards (e.g. Pets → food, pills, vet; Car →
+  insurance, inspection) with the number of bills and the monthly cost of each category.
+- **＋ Category** on the Bills tab creates a category and opens a new bill in it; **＋** on a
+  card adds a bill to that category; the bill form has **＋ New category…**.
+- Empty categories are listed below the cards for one-click adding.
+- New installs get a "Pets" bill category.
+
 ## 1.4.0
 
 - Recurring bills: the first payment date is optional. Without it there are no due dates,

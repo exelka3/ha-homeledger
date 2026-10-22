@@ -505,5 +505,22 @@
   "bills.unpaid_period.monthly": "Nesumokėta šį mėnesį",
   "bills.unpaid_period.quarterly": "Nesumokėta šį ketvirtį",
   "bills.unpaid_period.halfyear": "Nesumokėta šį pusmetį",
-  "bills.unpaid_period.yearly": "Nesumokėta šiais metais"
+  "bills.unpaid_period.yearly": "Nesumokėta šiais metais",
+  "bills.categories_title": "Pagal kategorijas",
+  "bills.add_category": "Kategorija",
+  "bills.manage_categories": "Redaguoti kategorijas",
+  "bills.add_in": "Pridėti sąskaitą į „{category}“",
+  "bills.category_summary": {
+    "one": "{n} sąskaita · ≈ {amount} per mėnesį",
+    "few": "{n} sąskaitos · ≈ {amount} per mėnesį",
+    "many": "{n} sąskaitų · ≈ {amount} per mėnesį",
+    "other": "{n} sąskaitų · ≈ {amount} per mėnesį"
+  },
+  "bills.empty_categories": "Kitos kategorijos:",
+  "bills.new_category_option": "＋ Nauja kategorija…",
+  "bills.new_category_name": "Naujos kategorijos pavadinimas",
+  "bills.category_placeholder": "Gyvūnai, Automobilis…",
+  "bills.category_required": "Įveskite kategorijos pavadinimą",
+  "bills.add_category_prompt": "Naujos kategorijos pavadinimas",
+  "bills.category_exists": "Tokia kategorija jau yra"
 }

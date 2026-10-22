@@ -505,5 +505,22 @@
   "bills.unpaid_period.monthly": "Не оплачено в этом месяце",
   "bills.unpaid_period.quarterly": "Не оплачено в этом квартале",
   "bills.unpaid_period.halfyear": "Не оплачено в этом полугодии",
-  "bills.unpaid_period.yearly": "Не оплачено в этом году"
+  "bills.unpaid_period.yearly": "Не оплачено в этом году",
+  "bills.categories_title": "По категориям",
+  "bills.add_category": "Категория",
+  "bills.manage_categories": "Изменить категории",
+  "bills.add_in": "Добавить платёж в «{category}»",
+  "bills.category_summary": {
+    "one": "{n} платёж · ≈ {amount} в месяц",
+    "few": "{n} платежа · ≈ {amount} в месяц",
+    "many": "{n} платежей · ≈ {amount} в месяц",
+    "other": "{n} платежа · ≈ {amount} в месяц"
+  },
+  "bills.empty_categories": "Остальные категории:",
+  "bills.new_category_option": "＋ Новая категория…",
+  "bills.new_category_name": "Название новой категории",
+  "bills.category_placeholder": "Животные, Авто…",
+  "bills.category_required": "Введите название категории",
+  "bills.add_category_prompt": "Название новой категории",
+  "bills.category_exists": "Такая категория уже есть"
 }

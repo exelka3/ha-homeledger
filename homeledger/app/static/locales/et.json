@@ -475,5 +475,20 @@
   "bills.unpaid_period.monthly": "Sel kuul maksmata",
   "bills.unpaid_period.quarterly": "Selles kvartalis maksmata",
   "bills.unpaid_period.halfyear": "Selles poolaastas maksmata",
-  "bills.unpaid_period.yearly": "Sel aastal maksmata"
+  "bills.unpaid_period.yearly": "Sel aastal maksmata",
+  "bills.categories_title": "Kategooriate kaupa",
+  "bills.add_category": "Kategooria",
+  "bills.manage_categories": "Muuda kategooriaid",
+  "bills.add_in": "Lisa arve kategooriasse „{category}”",
+  "bills.category_summary": {
+    "one": "{n} arve · ≈ {amount} kuus",
+    "other": "{n} arvet · ≈ {amount} kuus"
+  },
+  "bills.empty_categories": "Muud kategooriad:",
+  "bills.new_category_option": "＋ Uus kategooria…",
+  "bills.new_category_name": "Uue kategooria nimi",
+  "bills.category_placeholder": "Lemmikloomad, Auto…",
+  "bills.category_required": "Sisesta kategooria nimi",
+  "bills.add_category_prompt": "Uue kategooria nimi",
+  "bills.category_exists": "Selline kategooria on juba olemas"
 }

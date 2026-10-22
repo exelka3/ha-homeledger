@@ -124,6 +124,7 @@
     "Seguros",
     "Impuestos",
     "Formación y actividades",
+    "Mascotas",
     "Otros"
   ],
   "error.already_paid": "Ya está pagado para este periodo"

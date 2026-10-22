@@ -505,5 +505,22 @@
   "bills.unpaid_period.monthly": "Niezapłacone w tym miesiącu",
   "bills.unpaid_period.quarterly": "Niezapłacone w tym kwartale",
   "bills.unpaid_period.halfyear": "Niezapłacone w tym półroczu",
-  "bills.unpaid_period.yearly": "Niezapłacone w tym roku"
+  "bills.unpaid_period.yearly": "Niezapłacone w tym roku",
+  "bills.categories_title": "Według kategorii",
+  "bills.add_category": "Kategoria",
+  "bills.manage_categories": "Edytuj kategorie",
+  "bills.add_in": "Dodaj rachunek do „{category}”",
+  "bills.category_summary": {
+    "one": "{n} rachunek · ≈ {amount} miesięcznie",
+    "few": "{n} rachunki · ≈ {amount} miesięcznie",
+    "many": "{n} rachunków · ≈ {amount} miesięcznie",
+    "other": "{n} rachunku · ≈ {amount} miesięcznie"
+  },
+  "bills.empty_categories": "Pozostałe kategorie:",
+  "bills.new_category_option": "＋ Nowa kategoria…",
+  "bills.new_category_name": "Nazwa nowej kategorii",
+  "bills.category_placeholder": "Zwierzęta, Samochód…",
+  "bills.category_required": "Wpisz nazwę kategorii",
+  "bills.add_category_prompt": "Nazwa nowej kategorii",
+  "bills.category_exists": "Taka kategoria już istnieje"
 }

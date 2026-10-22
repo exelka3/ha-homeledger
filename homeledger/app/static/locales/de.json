@@ -475,5 +475,20 @@
   "bills.unpaid_period.monthly": "Diesen Monat nicht bezahlt",
   "bills.unpaid_period.quarterly": "Dieses Quartal nicht bezahlt",
   "bills.unpaid_period.halfyear": "Dieses Halbjahr nicht bezahlt",
-  "bills.unpaid_period.yearly": "Dieses Jahr nicht bezahlt"
+  "bills.unpaid_period.yearly": "Dieses Jahr nicht bezahlt",
+  "bills.categories_title": "Nach Kategorie",
+  "bills.add_category": "Kategorie",
+  "bills.manage_categories": "Kategorien bearbeiten",
+  "bills.add_in": "Rechnung zu „{category}“ hinzufügen",
+  "bills.category_summary": {
+    "one": "{n} Rechnung · ≈ {amount} pro Monat",
+    "other": "{n} Rechnungen · ≈ {amount} pro Monat"
+  },
+  "bills.empty_categories": "Weitere Kategorien:",
+  "bills.new_category_option": "＋ Neue Kategorie…",
+  "bills.new_category_name": "Name der neuen Kategorie",
+  "bills.category_placeholder": "Haustiere, Auto…",
+  "bills.category_required": "Gib den Namen der Kategorie ein",
+  "bills.add_category_prompt": "Name der neuen Kategorie",
+  "bills.category_exists": "Diese Kategorie gibt es schon"
 }

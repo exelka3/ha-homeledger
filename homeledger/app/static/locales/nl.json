@@ -475,5 +475,20 @@
   "bills.unpaid_period.monthly": "Niet betaald deze maand",
   "bills.unpaid_period.quarterly": "Niet betaald dit kwartaal",
   "bills.unpaid_period.halfyear": "Niet betaald dit halfjaar",
-  "bills.unpaid_period.yearly": "Niet betaald dit jaar"
+  "bills.unpaid_period.yearly": "Niet betaald dit jaar",
+  "bills.categories_title": "Per categorie",
+  "bills.add_category": "Categorie",
+  "bills.manage_categories": "Categorieën bewerken",
+  "bills.add_in": "Rekening toevoegen aan ‘{category}’",
+  "bills.category_summary": {
+    "one": "{n} rekening · ≈ {amount} per maand",
+    "other": "{n} rekeningen · ≈ {amount} per maand"
+  },
+  "bills.empty_categories": "Overige categorieën:",
+  "bills.new_category_option": "＋ Nieuwe categorie…",
+  "bills.new_category_name": "Naam van de nieuwe categorie",
+  "bills.category_placeholder": "Huisdieren, Auto…",
+  "bills.category_required": "Voer de naam van de categorie in",
+  "bills.add_category_prompt": "Naam van de nieuwe categorie",
+  "bills.category_exists": "Deze categorie bestaat al"
 }
