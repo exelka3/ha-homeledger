@@ -44,7 +44,8 @@ const ui = {
 // --- utils ---------------------------------------------------------------
 const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const today = () => new Date().toISOString().slice(0, 10);
+// Local calendar date (toISOString would give the UTC date, wrong around midnight).
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const num = (v) => (Number.isFinite(+v) ? +v : 0);
 function money(v, settings = db?.settings || {}) {
   const cents = Math.round(num(v) * 100) / 100; // money is exact to the cent; drops float noise from averages
@@ -129,7 +130,7 @@ function openForm({ title, fields, submitLabel = t("common.save"), onSubmit, onD
   const del = $("#modal-delete");
   del.hidden = !onDelete;
   del.onclick = async () => {
-    if (!confirm(t("common.delete_confirm"))) return;
+    if (!(await askConfirm(t("common.delete_confirm"), t("common.delete"), true))) return;
     closeModal();
     await onDelete();
   };
@@ -184,7 +185,42 @@ function closeModal() {
 }
 $("#modal-cancel").onclick = closeModal;
 $("#modal").addEventListener("click", (e) => e.target.id === "modal" && closeModal());
-document.addEventListener("keydown", (e) => e.key === "Escape" && closeModal());
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("#dialog").hidden) $("#dialog").cancel(); // the dialog sits on top of the form
+  else closeModal();
+});
+
+// In-app replacement for confirm()/prompt(): the HA companion apps silently answer "no" to native dialogs.
+// Resolves to true/false for a question, or to the entered text (null when cancelled) for an input.
+function askDialog({ text, input = null, okLabel, danger = false }) {
+  return new Promise((resolve) => {
+    const dlg = $("#dialog");
+    const form = $("#dialog-form");
+    const field = $("#dialog-input");
+    const ok = $("#dialog-ok");
+    $("#dialog-text").textContent = text;
+    field.hidden = input === null;
+    field.value = input ?? "";
+    ok.textContent = okLabel || (input === null ? t("common.yes") : t("common.save"));
+    ok.classList.toggle("danger-fill", danger);
+    const done = (value) => {
+      dlg.hidden = true;
+      form.onsubmit = dlg.onclick = $("#dialog-cancel").onclick = null;
+      resolve(value);
+    };
+    const cancel = () => done(input === null ? false : null);
+    dlg.cancel = cancel;
+    form.onsubmit = (e) => { e.preventDefault(); done(input === null ? true : field.value); };
+    $("#dialog-cancel").onclick = cancel;
+    // Block body on purpose: an onclick handler that returns false cancels the click (and the OK submit).
+    dlg.onclick = (e) => { if (e.target === dlg) cancel(); };
+    dlg.hidden = false;
+    setTimeout(() => (input === null ? ok : field).focus(), 30);
+  });
+}
+const askConfirm = (text, okLabel, danger = false) => askDialog({ text, okLabel, danger });
+const askText = (text, value = "") => askDialog({ text, input: value });
 
 const residentOptions = (withEmpty = true) => [...(withEmpty ? [["", t("common.not_set")]] : []), ...db.residents.map((r) => [r.id, r.name])];
 const methodOptions = () => [["", t("common.not_set")], ...db.settings.payment_methods.map((m) => [m, m])];
@@ -331,7 +367,7 @@ function budgetBar(spent, budget) {
 }
 
 // --- views -----------------------------------------------------------------
-const views = { overview, plans, groceries, cars, bills, stats, settings };
+const views = { overview, plans, groceries, cars, bills, expenses: expensesView, stats, settings };
 
 function render() {
   document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
@@ -1015,11 +1051,11 @@ function paymentForm(p) {
 }
 
 // Pay / skip buttons work the same on every screen that lists upcoming payments.
-function handleDueAction(el) {
+async function handleDueAction(el) {
   if (el.dataset.pay) payForm(recurringById(el.dataset.pay));
   if (el.dataset.skip) {
     const r = recurringById(el.dataset.skip);
-    if (confirm(t("bills.skip_confirm", { name: r.name, date: fmtDate(r.next_due) }))) {
+    if (await askConfirm(t("bills.skip_confirm", { name: r.name, date: fmtDate(r.next_due) }), t("bills.skip"))) {
       mutate("POST", `recurring/${r.id}/skip`, {}, t("bills.skipped"));
     }
   }
@@ -1175,6 +1211,147 @@ function bindHaCard() {
     }
   };
   loadHaInfo();
+}
+
+// Expenses: the simplest list — what for, price, paid or not, in your own order ---
+// Each expense belongs to a month (the month it was added to); older items fall back to their creation month.
+const expenseMonth = (x) => x.month || String(x.created_at || today()).slice(0, 7);
+const expenseItems = (month) => db.expense_items.filter((x) => expenseMonth(x) === month).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+function shiftMonth(month, delta) {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthTitle(month) {
+  const [y, m] = month.split("-").map(Number);
+  const s = new Intl.DateTimeFormat(locale(), { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function expensesView() {
+  const month = (ui.expMonth ||= today().slice(0, 7));
+  const items = expenseItems(month);
+  const total = items.reduce((s, x) => s + num(x.price), 0);
+  const paid = items.filter((x) => x.paid).reduce((s, x) => s + num(x.price), 0);
+  return `
+    <div class="row"><h2>${t("expenses.title")}</h2><span class="spacer"></span>
+      <div class="month-switch">
+        <button type="button" class="icon-btn" data-exp-month="-1" title="${esc(t("expenses.prev_month"))}" aria-label="${esc(t("expenses.prev_month"))}">‹</button>
+        <span class="month-name">${esc(monthTitle(month))}</span>
+        <button type="button" class="icon-btn" data-exp-month="1" title="${esc(t("expenses.next_month"))}" aria-label="${esc(t("expenses.next_month"))}">›</button>
+      </div></div>
+    <div class="grid kpi" style="margin-bottom:12px">
+      <div class="card kpi"><div class="label">${t("expenses.total")}</div><div class="value num">${money(total)}</div></div>
+      <div class="card kpi"><div class="label">${t("expenses.paid_total")}</div><div class="value num">${money(paid)}</div></div>
+      <div class="card kpi"><div class="label">${t("expenses.left")}</div><div class="value num">${money(total - paid)}</div></div>
+    </div>
+    <div class="card">
+      ${items.length ? `<ul class="list exp-list" id="exp-list">${items.map((x) => `
+        <li data-id="${x.id}" class="${x.paid ? "is-paid" : ""}">
+          <button type="button" class="drag-handle" aria-label="${esc(t("expenses.drag_hint"))}" title="${esc(t("expenses.drag_hint"))}">⠿</button>
+          <div class="grow" data-edit-expense="${x.id}"><div class="title">${esc(x.name)}</div>
+            ${x.paid && x.paid_at ? `<div class="muted small">${t("expenses.paid_on", { date: fmtDate(x.paid_at) })}</div>` : ""}</div>
+          <span class="num">${money(x.price)}</span>
+          <button type="button" class="pay-badge ${x.paid ? "paid" : ""}" data-toggle-paid="${x.id}" title="${esc(t("expenses.toggle_hint"))}">${t(x.paid ? "expenses.paid" : "expenses.unpaid")}</button>
+          <button type="button" class="icon-btn" data-edit-expense="${x.id}" title="${esc(t("common.edit"))}">✎</button>
+          <button type="button" class="icon-btn" data-del-expense="${x.id}" title="${esc(t("common.delete"))}">✕</button>
+        </li>`).join("")}</ul>`
+        : `<div class="empty">${t(db.expense_items.length ? "expenses.empty_month" : "expenses.empty", { month: monthTitle(month) })}</div>`}
+      <form class="exp-add-row ${items.length ? "" : "first"}" id="add-expense" autocomplete="off">
+        <span class="plus" aria-hidden="true">＋</span>
+        <input name="name" placeholder="${esc(t("expenses.name_placeholder"))}" aria-label="${esc(t("expenses.name_placeholder"))}" required>
+        <input name="price" type="number" min="0" step="any" inputmode="decimal" placeholder="${esc(t("expenses.price"))}" aria-label="${esc(t("expenses.price"))}" required>
+        <button class="btn sm primary">${t("common.add")}</button>
+      </form>
+    </div>`;
+}
+
+function expenseForm(x) {
+  openForm({
+    title: t("expenses.edit"),
+    fields: [
+      { name: "name", label: t("form.name"), value: x.name, required: true },
+      { type: "row", fields: [
+        { name: "price", label: t("form.amount_currency", { currency: db.settings.currency }), type: "number", value: x.price, required: true },
+        { name: "paid", label: t("form.status"), type: "select", value: x.paid ? "1" : "", options: [["", t("expenses.unpaid")], ["1", t("expenses.paid")]] },
+      ] },
+      { name: "paid_at", label: t("expenses.paid_date"), type: "date", value: x.paid_at || "" },
+    ],
+    onSubmit: (v) => {
+      const paid = v.paid === "1";
+      // A paid expense always has a payment date; an unpaid one never does.
+      return mutate("PUT", `expense_items/${x.id}`, { ...v, paid, paid_at: paid ? v.paid_at || today() : "" });
+    },
+    onDelete: () => mutate("DELETE", `expense_items/${x.id}`),
+  });
+}
+
+async function saveExpenseOrder(list) {
+  const ids = [...list.querySelectorAll("li[data-id]")].map((li) => li.dataset.id);
+  ids.forEach((id, i) => { const x = db.expense_items.find((e) => e.id === id); if (x) x.order = i; });
+  try {
+    await api("POST", "expense_items/reorder", { ids });
+  } catch (e) {
+    toast(e.message, true);
+    await reload();
+  }
+}
+
+// Drag & drop on pointer events: HTML5 drag-and-drop doesn't work with touch on iOS.
+// The row follows the finger/mouse; rows it passes over swap places live.
+function enableExpenseDrag(list) {
+  list.addEventListener("pointerdown", (e) => {
+    const handle = e.target.closest(".drag-handle");
+    if (!handle || e.button > 0) return;
+    e.preventDefault();
+    const row = handle.closest("li");
+    const startY = e.clientY;
+    let shift = 0; // how far the row moved in the layout through swaps (offsetTop ignores transform)
+    handle.setPointerCapture(e.pointerId);
+    row.classList.add("dragging");
+
+    const follow = (y) => { row.style.transform = `translateY(${y - startY - shift}px)`; };
+    const onMove = (ev) => {
+      follow(ev.clientY);
+      const rect = row.getBoundingClientRect();
+      const mid = rect.top + rect.height / 2;
+      const prev = row.previousElementSibling;
+      const next = row.nextElementSibling;
+      const top0 = row.offsetTop;
+      if (prev && mid < prev.getBoundingClientRect().top + prev.offsetHeight / 2) list.insertBefore(row, prev);
+      else if (next && mid > next.getBoundingClientRect().top + next.offsetHeight / 2) list.insertBefore(next, row);
+      else return;
+      shift += row.offsetTop - top0;
+      follow(ev.clientY);
+    };
+    const onEnd = () => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onEnd);
+      handle.removeEventListener("pointercancel", onEnd);
+      row.classList.remove("dragging");
+      row.style.transform = "";
+      if (shift) saveExpenseOrder(list);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onEnd);
+    handle.addEventListener("pointercancel", onEnd);
+  });
+
+  // Keyboard: focus the handle and use ↑ / ↓.
+  list.addEventListener("keydown", (e) => {
+    const handle = e.target.closest(".drag-handle");
+    if (!handle || !["ArrowUp", "ArrowDown"].includes(e.key)) return;
+    e.preventDefault();
+    const row = handle.closest("li");
+    const sibling = e.key === "ArrowUp" ? row.previousElementSibling : row.nextElementSibling;
+    if (!sibling) return;
+    if (e.key === "ArrowUp") list.insertBefore(row, sibling);
+    else list.insertBefore(sibling, row);
+    handle.focus();
+    saveExpenseOrder(list);
+  });
 }
 
 // Stats ---------------------------------------------------------------------
@@ -1420,10 +1597,42 @@ const bind = {
     };
   },
 
+  expenses() {
+    $("#add-expense").onsubmit = async (e) => {
+      e.preventDefault();
+      const f = e.target.elements;
+      const name = f.name.value.trim();
+      if (!name) return;
+      const order = Math.max(-1, ...db.expense_items.map((x) => x.order ?? 0)) + 1; // new items go to the end
+      await mutate("POST", "expense_items", { name, price: num(f.price.value), paid: false, paid_at: "", order, month: ui.expMonth });
+      $("#add-expense")?.elements.name.focus();
+    };
+    const list = $("#exp-list");
+    if (list) enableExpenseDrag(list);
+    $("#view").onclick = (e) => {
+      const el = e.target.closest("[data-toggle-paid],[data-edit-expense],[data-del-expense],[data-exp-month]");
+      if (!el) return;
+      if (el.dataset.expMonth) {
+        ui.expMonth = shiftMonth(ui.expMonth, Number(el.dataset.expMonth));
+        return render();
+      }
+      const find = (id) => db.expense_items.find((x) => x.id === id);
+      if (el.dataset.togglePaid) {
+        const paid = !find(el.dataset.togglePaid).paid;
+        mutate("PUT", `expense_items/${el.dataset.togglePaid}`, { paid, paid_at: paid ? today() : "" }); // the date Paid was tapped
+      }
+      if (el.dataset.editExpense) expenseForm(find(el.dataset.editExpense));
+      if (el.dataset.delExpense) {
+        const id = el.dataset.delExpense;
+        askConfirm(t("common.delete_confirm"), t("common.delete"), true).then((yes) => yes && mutate("DELETE", `expense_items/${id}`));
+      }
+    };
+  },
+
   bills() {
     $("#add-recurring").onclick = () => recurringForm();
     $("#add-bill-category").onclick = async () => {
-      const name = prompt(t("bills.add_category_prompt"))?.trim();
+      const name = (await askText(t("bills.add_category_prompt")))?.trim();
       if (!name) return;
       try {
         if (!(await addBillCategory(name))) toast(t("bills.category_exists"), true);
@@ -1553,10 +1762,12 @@ const bind = {
       if (el.dataset.renameTag) {
         const key = el.dataset.renameTag;
         const old = db.settings[key][+el.dataset.i];
-        const name = prompt(t("settings.rename_prompt"), old)?.trim();
-        if (name && name !== old) {
-          mutate("POST", "settings/rename", { key, old, new: name }).then((r) => toast(r.records ? t("settings.renamed_records", { n: r.records }) : t("settings.renamed")));
-        }
+        askText(t("settings.rename_prompt"), old).then((value) => {
+          const name = value?.trim();
+          if (name && name !== old) {
+            mutate("POST", "settings/rename", { key, old, new: name }).then((r) => toast(r.records ? t("settings.renamed_records", { n: r.records }) : t("settings.renamed")));
+          }
+        });
       }
       if (el.dataset.delTag) {
         const list = [...db.settings[el.dataset.delTag]];
@@ -1598,7 +1809,7 @@ const bind = {
     };
     $("#import-file").onchange = async (e) => {
       const file = e.target.files[0];
-      if (!file || !confirm(t("settings.import_confirm"))) return;
+      if (!file || !(await askConfirm(t("settings.import_confirm")))) return;
       try { await mutate("POST", "import", JSON.parse(await file.text()), t("settings.imported")); }
       catch { toast(t("settings.import_failed"), true); }
     };
@@ -1612,8 +1823,8 @@ function bindShopping() {
     Object.assign(ui.shopping, Object.fromEntries(new FormData(form).entries()));
     saveShopping();
   };
-  $("#cancel-shop").onclick = () => {
-    if (ui.shopping.checked.length && !confirm(t("shop.exit_confirm"))) return;
+  $("#cancel-shop").onclick = async () => {
+    if (ui.shopping.checked.length && !(await askConfirm(t("shop.exit_confirm")))) return;
     ui.shopping = null; saveShopping(); render();
   };
   $("#view").onclick = (e) => {

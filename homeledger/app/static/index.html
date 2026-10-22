@@ -37,6 +37,9 @@
       <button data-view="bills" title="Bills" aria-label="Bills" data-i18n-title="nav.bills" data-i18n-aria="nav.bills">
         <svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg>
       </button>
+      <button data-view="expenses" title="Expenses" aria-label="Expenses" data-i18n-title="nav.expenses" data-i18n-aria="nav.expenses">
+        <svg viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+      </button>
       <button data-view="stats" title="Statistics" aria-label="Statistics" data-i18n-title="nav.stats" data-i18n-aria="nav.stats">
         <svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
       </button>
@@ -57,6 +60,19 @@
         <span class="spacer"></span>
         <button type="button" class="btn ghost" id="modal-cancel" data-i18n="common.cancel">Cancel</button>
         <button type="submit" class="btn primary" id="modal-submit" data-i18n="common.save">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- In-app confirm / text dialog: native confirm() and prompt() don't show inside the Home Assistant apps. -->
+  <div class="modal-backdrop dialog-backdrop" id="dialog" hidden>
+    <form class="modal dialog" id="dialog-form" autocomplete="off">
+      <p id="dialog-text"></p>
+      <input id="dialog-input" hidden>
+      <div class="modal-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" id="dialog-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="dialog-ok">OK</button>
       </div>
     </form>
   </div>

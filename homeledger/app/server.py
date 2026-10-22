@@ -55,7 +55,8 @@ def asset_fingerprint():
 # In the add-on only the Supervisor's Ingress proxy may talk to us (no auth of our own).
 ALLOWED_CLIENTS = {ip.strip() for ip in os.environ.get("ALLOWED_CLIENTS", "").split(",") if ip.strip()}
 
-COLLECTIONS = ("residents", "plans", "plan_items", "groceries", "trips", "cars", "car_expenses", "recurring", "payments")
+COLLECTIONS = ("residents", "plans", "plan_items", "groceries", "trips", "cars", "car_expenses", "recurring", "payments",
+               "expense_items")
 
 # Child collections removed together with their parent record.
 CASCADE = {"plans": ("plan_items", "plan_id"), "cars": ("car_expenses", "car_id")}
@@ -70,6 +71,7 @@ DEFAULT_DB = {
     "car_expenses": [],
     "recurring": [],
     "payments": [],
+    "expense_items": [],  # the simple Expenses list: name, price, paid, order
     "notify_log": {},
     "settings": {
         "language": "auto",
@@ -376,6 +378,14 @@ class Handler(SimpleHTTPRequestHandler):
 
         if parts == ["settings", "rename"] and method == "POST":
             return rename_setting(db, body), True
+
+        if parts == ["expense_items", "reorder"] and method == "POST":
+            # Drag & drop result: the full list of ids in their new order.
+            position = {item_id: i for i, item_id in enumerate(body.get("ids") or [])}
+            for item in db["expense_items"]:
+                item["order"] = position.get(item["id"], len(position) + item.get("order", 0))
+            db["expense_items"].sort(key=lambda x: x.get("order", 0))
+            return {"ok": True}, True
 
         if parts == ["groceries", "checkout"] and method == "POST":
             return checkout(db, body), True

@@ -24,6 +24,8 @@ Documentation in Russian: [DOCS.ru.md](https://github.com/exelka3/ha-homeledger/
   Bills are grouped by category (Pets, Car, Utilities…); create categories with
   **＋ Category** or **＋ New category…** in the bill form.
   A **one-time** bill is paid once and then moves to finished bills.
+- **Expenses** — a simple list per month: what for, price, paid / not paid (the payment
+  date is recorded when you tap Paid); drag ⠿ to reorder.
 - **Statistics** — by month, resident, section, category and store.
 - **Settings** — residents, budgets, language & currency, lists, Home Assistant, export.
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.7.0
+
+- New **Expenses** tab: the simplest list — what for and how much, a paid / not paid badge
+  (tap to switch), totals (total, paid, left to pay).
+- Reorder by drag & drop with the ⠿ handle — works with a mouse and on touch screens
+  (including iPhone), or with ↑ / ↓ on the focused handle.
+- The add form is the last row of the list and looks like one (＋ · what for · price · Add).
+- Expenses are kept per month (‹ month ›): each month has its own list and totals.
+  Tapping **Paid** records the payment date, shown under the item and editable in ✎.
+- Fixed: Delete and other confirmations did nothing inside the Home Assistant apps, which
+  silently block the browser's confirm()/prompt() dialogs. Homeledger now uses its own
+  dialog for delete, skip, import, leaving the store, new category and rename.
+- Fixed: "today" was the UTC date, so items marked around midnight could get yesterday's date.
+
 ## 1.6.0
 
 - One-time payments: a new "One-time" frequency for bills that don't repeat. With a date it
